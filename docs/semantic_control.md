@@ -1,5 +1,11 @@
+# Semantic-control experiment guide
 
+For the current workspace and package boundaries, first read
+`../../WORKSPACE_LAYOUT.md` and `../sledge/semantic_control/README.md`.
 
+The commands below operate on the executable legacy generation path. The
+EventFrame language-understanding experiments are kept separately under
+`sledge/script/language/` and do not yet feed the cache builder directly.
 
 后半段流程：
 original raw + edited raw

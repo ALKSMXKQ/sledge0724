@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Mapping, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -34,6 +34,7 @@ OBJECT_HEIGHT = 1.0  # placeholder
 def sledge_vector_to_detection_tracks(
     sledge_vector: SledgeVector,
     timestamp_us: int,
+    object_type_overrides: Optional[Mapping[str, Mapping[str, str]]] = None,
 ) -> DetectionsTracks:
     """
     Converts sledge vector dataclass into detection tracks dataclass for simulation pipeline.
@@ -42,12 +43,14 @@ def sledge_vector_to_detection_tracks(
     :return: detection track dataclass in nuPlan.
     """
     tracked_objects: List[TrackedObject] = []
+    object_type_overrides = object_type_overrides or {}
 
     # 1. vehicles
     vehicles = sledge_element_to_tracked_objects(
         sledge_vector.vehicles,
         timestamp_us,
         TrackedObjectType.VEHICLE,
+        object_type_overrides.get("vehicles", {}),
     )
     tracked_objects.extend(vehicles)
 
@@ -56,6 +59,7 @@ def sledge_vector_to_detection_tracks(
         sledge_vector.pedestrians,
         timestamp_us,
         TrackedObjectType.PEDESTRIAN,
+        object_type_overrides.get("pedestrians", {}),
     )
     tracked_objects.extend(pedestrians)
 
@@ -64,6 +68,7 @@ def sledge_vector_to_detection_tracks(
         sledge_vector.static_objects,
         timestamp_us,
         TrackedObjectType.GENERIC_OBJECT,
+        object_type_overrides.get("static_objects", {}),
     )
     tracked_objects.extend(static_objects)
 
@@ -71,7 +76,10 @@ def sledge_vector_to_detection_tracks(
 
 
 def sledge_element_to_tracked_objects(
-    sledge_vector_element: SledgeVectorElement, timestamp_us: int, tracked_object_type: TrackedObjectType
+    sledge_vector_element: SledgeVectorElement,
+    timestamp_us: int,
+    tracked_object_type: TrackedObjectType,
+    type_overrides: Optional[Mapping[str, str]] = None,
 ) -> List[TrackedObject]:
     """
     Collects all valid bounding box entities from vector element dataclass.
@@ -83,11 +91,24 @@ def sledge_element_to_tracked_objects(
     assert sledge_vector_element.get_element_type() in [SledgeVectorElementType.AGENT, SledgeVectorElementType.STATIC]
 
     tracked_objects: List[TrackedObject] = []
+    type_overrides = type_overrides or {}
     for element_idx, (state, mask) in enumerate(zip(sledge_vector_element.states, sledge_vector_element.mask)):
         invalid = not mask if type(mask) is np.bool_ else mask < LABEL_THRESH
         if invalid:
             continue
-        tracked_object = state_array_to_tracked_object(state, timestamp_us, tracked_object_type, str(element_idx))
+        resolved_type = tracked_object_type
+        override_name = type_overrides.get(str(element_idx))
+        if override_name is not None:
+            try:
+                resolved_type = TrackedObjectType[str(override_name)]
+            except KeyError as exc:
+                raise ValueError(f"Unsupported TrackedObjectType override={override_name!r}") from exc
+        element_type = sledge_vector_element.get_element_type()
+        if element_type == SledgeVectorElementType.AGENT and resolved_type not in AGENT_TYPES:
+            raise ValueError(f"Agent state cannot be decoded as static type {resolved_type.name}")
+        if element_type == SledgeVectorElementType.STATIC and resolved_type in AGENT_TYPES:
+            raise ValueError(f"Static state cannot be decoded as agent type {resolved_type.name}")
+        tracked_object = state_array_to_tracked_object(state, timestamp_us, resolved_type, str(element_idx))
         tracked_objects.append(tracked_object)
 
     return tracked_objects

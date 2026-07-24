@@ -12,9 +12,9 @@ from omegaconf import OmegaConf
 from tqdm import tqdm
 
 from sledge.semantic_control.io import load_raw_scene, save_json, save_raw_scene
-from sledge.semantic_control.prompt_alignment import PromptAlignmentEvaluator
-from sledge.semantic_control.prompt_parser import NaturalLanguagePromptParser
-from sledge.semantic_control.vector_editor import SemanticSceneEditor
+from sledge.semantic_control.generation.legacy.prompt_alignment import PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_parser import NaturalLanguagePromptParser
+from sledge.semantic_control.generation.legacy.vector_editor import SemanticSceneEditor
 
 
 SCENARIO_TO_BASE_PROMPT = {

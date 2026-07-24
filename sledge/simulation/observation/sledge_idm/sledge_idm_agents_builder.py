@@ -65,6 +65,7 @@ def build_idm_agents_on_map_rails(
     minimum_path_length: float,
     scenario: AbstractScenario,
     static_detections_types: List[TrackedObjectType],
+    stationary_vehicle_speed_threshold: Optional[float] = None,
 ) -> Tuple[UniqueIDMAgents, OccupancyMap]:
     """
     Build unique agents from a scenario. InterpolatedPaths are created for each agent according to their driven path
@@ -102,6 +103,18 @@ def build_idm_agents_on_map_rails(
     for agent in detections.tracked_objects.get_tracked_objects_of_type(TrackedObjectType.VEHICLE):
         # filter for only vehicles
         if agent.track_token not in unique_vehicles:
+
+            # Parked vehicles are scene structure (and often deliberate
+            # occluders), not free-road IDM traffic. Preserve their original
+            # VEHICLE classification and pose instead of snapping them onto a
+            # lane and accelerating them from rest.
+            if (
+                stationary_vehicle_speed_threshold is not None
+                and agent.velocity.magnitude() <= stationary_vehicle_speed_threshold
+            ):
+                occupancy_map.insert(agent.track_token, agent.box.geometry)
+                unique_static_objects[agent.track_token] = SledgeObjectAgent(agent)
+                continue
 
             route, progress = get_starting_segment(agent, map_api)
 

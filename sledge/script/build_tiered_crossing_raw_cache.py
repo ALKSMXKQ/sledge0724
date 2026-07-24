@@ -14,9 +14,9 @@ import numpy as np
 from omegaconf import OmegaConf
 
 from sledge.semantic_control.io import load_raw_scene, save_raw_scene, save_json
-from sledge.semantic_control.prompt_parser import NaturalLanguagePromptParser
-from sledge.semantic_control.vector_editor import SemanticSceneEditor
-from sledge.semantic_control.prompt_alignment import PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_alignment import PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_parser import NaturalLanguagePromptParser
+from sledge.semantic_control.generation.legacy.vector_editor import SemanticSceneEditor
 from sledge.autoencoder.preprocessing.features.sledge_vector_feature import SledgeVectorRaw
 
 

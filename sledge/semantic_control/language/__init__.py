@@ -1,0 +1,80 @@
+"""Language semantic-control modules.
+
+This package contains the EventFrame-based natural-language scene understanding
+pipeline used by the language evaluation scripts.
+
+The imports are intentionally lightweight so importing this package does not
+eagerly load old evaluator modules or optional experiment dependencies.
+"""
+
+from sledge.semantic_control.language.event_frame import (
+    ActorFrame,
+    CompletedParameter,
+    DiagnosticsFrame,
+    EgoEventFrame,
+    EventFrame,
+    EventSequenceStep,
+    MainEventFrame,
+    MissingInformationFrame,
+    OcclusionFrame,
+    RoadContextFrame,
+    normalize_event_frame_dict,
+)
+
+from sledge.semantic_control.language.event_frame_parser import EventFrameParser
+from sledge.semantic_control.language.event_sequence_builder import EventSequenceBuilder
+from sledge.semantic_control.language.event_frame_mapper import (
+    EventFrameToHazardSpecMapper,
+    flatten_dict,
+    validate_spec,
+)
+from sledge.semantic_control.language.event_frame_verifier import (
+    EventFrameVerifier,
+    VerificationResult,
+)
+from sledge.semantic_control.language.missing_info_filler import MissingInfoFiller
+from sledge.semantic_control.language.narrative_semantics import (
+    EventCandidate,
+    HazardFocusResolver,
+    NarrativeAnalysis,
+    NarrativeDecomposer,
+)
+from sledge.semantic_control.language.direct_template_baseline import (
+    DirectTemplateBaseline,
+    DirectTemplateFrame,
+    DirectTemplateMapper,
+    DirectTemplateParser,
+    validate_direct_template_spec,
+)
+
+
+__all__ = [
+    "ActorFrame",
+    "CompletedParameter",
+    "DiagnosticsFrame",
+    "EgoEventFrame",
+    "EventFrame",
+    "EventSequenceStep",
+    "MainEventFrame",
+    "MissingInformationFrame",
+    "OcclusionFrame",
+    "RoadContextFrame",
+    "normalize_event_frame_dict",
+    "EventFrameParser",
+    "EventSequenceBuilder",
+    "EventFrameToHazardSpecMapper",
+    "flatten_dict",
+    "validate_spec",
+    "EventFrameVerifier",
+    "VerificationResult",
+    "MissingInfoFiller",
+    "NarrativeDecomposer",
+    "HazardFocusResolver",
+    "NarrativeAnalysis",
+    "EventCandidate",
+    "DirectTemplateFrame",
+    "DirectTemplateParser",
+    "DirectTemplateMapper",
+    "DirectTemplateBaseline",
+    "validate_direct_template_spec",
+]

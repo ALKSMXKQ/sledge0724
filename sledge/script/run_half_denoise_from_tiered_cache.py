@@ -31,7 +31,8 @@ from sledge.common.visualization.sledge_visualization_utils import (
 )
 from sledge.script.builders.diffusion_builder import build_pipeline_from_checkpoint
 from sledge.script.builders.model_builder import build_autoencoder_torch_module_wrapper
-from sledge.semantic_control import NaturalLanguagePromptParser, PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_alignment import PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_parser import NaturalLanguagePromptParser
 from sledge.semantic_control.io import (
     feature_to_raw_scene_dict,
     load_raw_scene,

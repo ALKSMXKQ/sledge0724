@@ -41,6 +41,8 @@ https://github.com/autonomousvision/sledge/assets/50077664/1c653fda-6e44-4018-ae
 - [Running the autoencoder](docs/autoencoder.md) 
 - [Running the diffusion model](docs/diffusion.md)
 - [Simulation and visualization](docs/simulation.md)
+- [Semantic control and high-risk scene generation](docs/semantic_control.md)
+- [Local workspace layout](../WORKSPACE_LAYOUT.md)
 
 
 ## Changelog &#128759; <a name="changelog"></a>

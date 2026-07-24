@@ -1,6 +1,14 @@
-from sledge.semantic_control.evaluators.crossing_evaluator import CrossingAlignmentEvaluator
-from sledge.semantic_control.evaluators.cut_in_evaluator import CutInAlignmentEvaluator
-from sledge.semantic_control.evaluators.braking_evaluator import HardBrakeAlignmentEvaluator
+"""Backward-compatible evaluator imports.
+
+The implementations now live under
+``sledge.semantic_control.generation.legacy.evaluators``.
+"""
+
+from sledge.semantic_control.generation.legacy.evaluators import (
+    CrossingAlignmentEvaluator,
+    CutInAlignmentEvaluator,
+    HardBrakeAlignmentEvaluator,
+)
 
 __all__ = [
     "CrossingAlignmentEvaluator",

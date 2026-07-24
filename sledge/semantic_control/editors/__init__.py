@@ -1,9 +1,13 @@
-from sledge.semantic_control.editors.pedestrian_crossing_editor import PedestrianCrossingEditor
-from sledge.semantic_control.editors.cut_in_editor import CutInEditor
-from sledge.semantic_control.editors.hard_brake_editor import HardBrakeEditor
+"""Backward-compatible editor imports.
 
-__all__ = [
-    "PedestrianCrossingEditor",
-    "CutInEditor",
-    "HardBrakeEditor",
-]
+The implementations now live under
+``sledge.semantic_control.generation.legacy.editors``.
+"""
+
+from sledge.semantic_control.generation.legacy.editors import (
+    CutInEditor,
+    HardBrakeEditor,
+    PedestrianCrossingEditor,
+)
+
+__all__ = ["PedestrianCrossingEditor", "CutInEditor", "HardBrakeEditor"]

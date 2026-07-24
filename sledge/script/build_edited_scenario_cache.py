@@ -25,11 +25,9 @@ from sledge.common.visualization.sledge_visualization_utils import (
     get_sledge_raster,
     get_sledge_vector_as_raster,
 )
-from sledge.semantic_control import (
-    NaturalLanguagePromptParser,
-    PromptAlignmentEvaluator,
-    SemanticSceneEditor,
-)
+from sledge.semantic_control.generation.legacy.prompt_alignment import PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_parser import NaturalLanguagePromptParser
+from sledge.semantic_control.generation.legacy.vector_editor import SemanticSceneEditor
 from sledge.semantic_control.io import (
     feature_to_raw_scene_dict,
     load_raw_scene,

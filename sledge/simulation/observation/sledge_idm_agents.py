@@ -28,6 +28,7 @@ class SledgeIDMAgents(AbstractObservation):
         scenario: AbstractScenario,
         minimum_path_length: float = 20,
         radius: float = 64,
+        stationary_vehicle_speed_threshold: Optional[float] = None,
     ):
         """
         Constructor for SledgeIDMAgents
@@ -53,6 +54,7 @@ class SledgeIDMAgents(AbstractObservation):
 
         self._minimum_path_length = minimum_path_length
         self._radius = radius
+        self._stationary_vehicle_speed_threshold = stationary_vehicle_speed_threshold
 
         # Prepare IDM agent manager
         self.current_ego_state: EgoState = scenario.initial_ego_state
@@ -91,6 +93,7 @@ class SledgeIDMAgents(AbstractObservation):
                 self._minimum_path_length,
                 self._scenario,
                 self._static_detections_types,
+                self._stationary_vehicle_speed_threshold,
             )
             self._agent_manager = SledgeIDMAgentManager(
                 unique_vehicles,

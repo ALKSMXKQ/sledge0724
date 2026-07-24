@@ -1,0 +1,53 @@
+{
+  "schema_version": "occluded_pedestrian_matrix_v2_nuplan_types",
+  "diversity_axes": [
+    "occluder_type",
+    "crossing_direction",
+    "pedestrian_speed_mps",
+    "source_scenario_type"
+  ],
+  "source_sampling": "deterministic_stratified_round_robin",
+  "prompt_templates": [
+    "A pedestrian hidden behind a {occluder} emerges and crosses from {direction} at pedestrian speed {speed} m/s, creating a {risk} near-miss ahead of ego.",
+    "Generate a {risk} scene where a person comes out from behind a {occluder} and moves from {direction} across the ego path at pedestrian speed {speed} m/s.",
+    "The {occluder} blocks ego's view before a pedestrian suddenly crosses {direction} at pedestrian speed {speed} m/s; keep the interaction {risk} without an initial collision.",
+    "A {risk} occluded-pedestrian event: a {occluder} hides a pedestrian, who then rushes {direction} into ego's path at {speed} m/s."
+  ],
+  "profiles": {
+    "debug20": {
+      "occluder_types": ["vehicle"],
+      "directions": ["right_to_left"],
+      "pedestrian_speeds_mps": [1.6],
+      "risk_level": "moderate",
+      "samples_per_condition": 20
+    },
+    "paper18": {
+      "occluder_types": ["vehicle", "barrier", "generic_object"],
+      "directions": ["left_to_right", "right_to_left"],
+      "pedestrian_speeds_mps": [1.2, 1.6, 1.9],
+      "risk_level": "moderate",
+      "samples_per_condition": 10
+    },
+    "extended24": {
+      "occluder_types": ["vehicle", "bicycle", "barrier", "generic_object"],
+      "directions": ["left_to_right", "right_to_left"],
+      "pedestrian_speeds_mps": [1.2, 1.6, 1.9],
+      "risk_level": "moderate",
+      "samples_per_condition": 10
+    },
+    "pilot100": {
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "directions": ["left_to_right", "right_to_left"],
+      "pedestrian_speeds_mps": [1.6, 1.9, 2.0],
+      "risk_level": "moderate",
+      "total_samples": 100
+    }
+  }
+}

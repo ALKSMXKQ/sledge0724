@@ -34,7 +34,8 @@ from sledge.autoencoder.preprocessing.features.sledge_vector_feature import (
     SledgeVectorElement,
     SledgeVectorRaw,
 )
-from sledge.semantic_control import NaturalLanguagePromptParser, PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_alignment import PromptAlignmentEvaluator
+from sledge.semantic_control.generation.legacy.prompt_parser import NaturalLanguagePromptParser
 from sledge.script.run_half_denoise_from_tiered_cache import (
     basic_scene_compliance,
     make_simulation_compatible_vector,

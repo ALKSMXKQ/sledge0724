@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 # import warnings
+import gzip
+import pickle
 from pathlib import Path
-from typing import Any, Generator, List, Optional, Set, Tuple, Type, cast
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, cast
 
 import numpy as np
 from shapely.geometry import Point
@@ -33,6 +35,9 @@ from sledge.simulation.scenarios.sledge_scenario.sledge_scenario_utils import (
 )
 
 
+OBJECT_TYPE_METADATA_KEY = "__sledge_object_type_overrides__"
+
+
 # TODO: add to some config
 FUTURE_SAMPLING = TrajectorySampling(time_horizon=15, interval_length=0.1)
 TRAFFIC_LIGHT_FLIP = 10.0  # [s]
@@ -50,6 +55,7 @@ class SledgeScenario(AbstractScenario):
         self._sledge_vector: SledgeVector = FeatureCachePickle().load_computed_feature_from_folder(
             data_root, SledgeVector
         )
+        self._object_type_overrides = self._load_object_type_overrides(data_root)
         self._map_api = SledgeMap(self._sledge_vector)
 
         self._log_file = data_root
@@ -70,6 +76,25 @@ class SledgeScenario(AbstractScenario):
         self._number_of_iterations = len(self._time_points)
 
         self._route_roadblock_ids, self._route_path = get_route(self._map_api)
+
+    @staticmethod
+    def _load_object_type_overrides(data_root: Path) -> Dict[str, Dict[str, str]]:
+        feature_path = Path(data_root).with_suffix(".gz")
+        try:
+            with gzip.open(feature_path, "rb") as fp:
+                payload = pickle.load(fp)
+        except (OSError, pickle.PickleError, EOFError):
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        raw = payload.get(OBJECT_TYPE_METADATA_KEY, {})
+        if not isinstance(raw, dict):
+            return {}
+        return {
+            str(element): {str(index): str(type_name) for index, type_name in entries.items()}
+            for element, entries in raw.items()
+            if isinstance(entries, dict)
+        }
 
     def _dt(self) -> float:
         return self._future_sampling.interval_length  # 0.1s
@@ -230,7 +255,11 @@ class SledgeScenario(AbstractScenario):
 
         time_point = self.get_time_point(iteration)
         projected_sledge_vector = project_sledge_vector(self._sledge_vector, time_point.time_s)
-        detection_tracks = sledge_vector_to_detection_tracks(projected_sledge_vector, time_point.time_us)
+        detection_tracks = sledge_vector_to_detection_tracks(
+            projected_sledge_vector,
+            time_point.time_us,
+            self._object_type_overrides,
+        )
         return detection_tracks
 
     def get_tracked_objects_within_time_window_at_iteration(

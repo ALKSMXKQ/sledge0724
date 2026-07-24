@@ -1,0 +1,52 @@
+{
+  "schema_version": "occluded_pedestrian_front_half_template_v1",
+  "scenario_family": "occluded_pedestrian",
+  "natural_language_contract": {
+    "required_semantics": [
+      "a pedestrian is initially occluded",
+      "the pedestrian later crosses the ego path"
+    ],
+    "controllable_slots": {
+      "occluder_type": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "crossing_direction": ["left_to_right", "right_to_left"],
+      "pedestrian_speed_mps": {"minimum": 0.5, "maximum": 2.0},
+      "risk_level": ["mild", "moderate", "aggressive"]
+    },
+    "example_en": "A pedestrian hidden behind a road barrier rushes from right to left into ego's path at 1.6 m/s.",
+    "example_zh": "一名被施工牌遮挡的行人以1.6米每秒的速度从右向左冲入自车路径。"
+  },
+  "parameter_template": {
+    "semantic_family": "occluded_pedestrian",
+    "primary_actor_type": "PEDESTRIAN",
+    "occluder_tracked_object_type": "<derived from occluder_type>",
+    "crossing_direction": "<left_to_right|right_to_left>",
+    "pedestrian_speed_mps": "<0.5..2.0>",
+    "risk_level": "<mild|moderate|aggressive>",
+    "occlusion_relation": "between_ego_and_pedestrian",
+    "initial_overlap_allowed": false,
+    "collision_allowed": false,
+    "minimum_occluder_to_ego_corridor_clearance_m": 1.5,
+    "output": {
+      "raw_feature": "b1_edited_cache/<sample_id>/sledge_raw.gz",
+      "simulation_feature": "b1_simulation_cache/log/sudden_pedestrian_crossing/<sample_id>/sledge_vector.gz",
+      "type_encoding": "embedded __sledge_object_type_overrides__ metadata"
+    }
+  },
+  "category_policy": {
+    "EGO": "reserved for the controlled ego vehicle; never used as an occluder",
+    "PEDESTRIAN": "reserved for the rushing target actor; never reused as the occluder",
+    "VEHICLE": "car, van, truck and bus wording all canonicalize to this one visible category",
+    "BICYCLE": "available for visual/physical pilot evaluation",
+    "GENERIC_OBJECT": "generic static occluder",
+    "TRAFFIC_CONE": "small static occluder; pilot determines whether its occlusion is physically useful",
+    "BARRIER": "static road barrier",
+    "CZONE_SIGN": "construction-zone sign"
+  }
+}
