@@ -1,0 +1,48 @@
+{
+  "schema_version": "occluded_pedestrian_semantic_retention_matrix_v1",
+  "prompt_templates": [
+    "A {risk} occluded-pedestrian scene: a pedestrian hidden behind a {occluder} positioned {position} emerges and crosses from {direction} at {speed} m/s into ego's path.",
+    "Create a {risk} near-miss where a {occluder}, placed {position}, blocks ego's view before a pedestrian rushes {direction} across the ego route at {speed} m/s.",
+    "The {occluder} is {position} and hides a pedestrian who suddenly crosses {direction} at {speed} m/s; preserve a {risk} interaction without an initial collision."
+  ],
+  "profiles": {
+    "debug12": {
+      "occluder_types": ["vehicle", "barrier"],
+      "occluder_positions": ["near_ego", "midway", "near_pedestrian"],
+      "directions": ["left_to_right", "right_to_left"],
+      "risk_levels": ["moderate"],
+      "pedestrian_speeds_mps": [1.6],
+      "total_samples": 12
+    },
+    "default": {
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "occluder_positions": ["near_ego", "midway", "near_pedestrian"],
+      "directions": ["left_to_right", "right_to_left"],
+      "risk_levels": ["mild", "moderate", "aggressive"],
+      "pedestrian_speeds_mps": [1.2, 1.6, 2.0],
+      "total_samples": 180
+    },
+    "full324": {
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "occluder_positions": ["near_ego", "midway", "near_pedestrian"],
+      "directions": ["left_to_right", "right_to_left"],
+      "risk_levels": ["mild", "moderate", "aggressive"],
+      "pedestrian_speeds_mps": [1.2, 1.6, 2.0],
+      "total_samples": 324
+    }
+  }
+}
