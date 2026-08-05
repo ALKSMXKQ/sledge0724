@@ -27,11 +27,51 @@ road_topology
 -> executable parameters
 ```
 
-A child value is legal only when it is registered under its selected parent.
-For example, `pedestrian -> aggressive_cut_in` is rejected, while
-`child_pedestrian -> occluded_emergence -> parked_truck_occluder` is valid.
-Missing numeric leaves are conditioned on the full selected parent path and are
-stored with `source`, `confidence`, `conditioned_on`, and `is_assumption`.
+## nuPlan/SLEDGE category projection
+
+The hierarchy separates linguistic descriptions from executable actor classes.
+All human-on-foot descriptions (`child`, `adult`, `jogger`, wheelchair user,
+etc.) are normalized to:
+
+```text
+primary_actor_type = pedestrian
+tracked_object_type = TrackedObjectType.PEDESTRIAN
+sledge_collection = pedestrians
+```
+
+The original wording remains available as
+`hierarchy_layer.attributes.language_actor_detail`; it does not create a new
+nuPlan or SLEDGE actor category.
+
+For an occluded pedestrian emergence, the direction is represented once in a
+relative geometric frame:
+
+```text
+motion_direction = occluder_to_ego_path
+```
+
+When the prompt does not state the roadside, `occluder_side` may sample left or
+right once for scene diversity. After that placement is sampled, pedestrian
+heading is deterministically derived from the occluder position toward the ego
+path. The output never creates two alternative pedestrian motion directions for
+one scene.
+
+## Tree and parameter semantics
+
+`allowed_values_at_level` contains legal sibling values for the current node.
+`allowed_children` contains the actual legal values for the next node type.
+`hierarchy_layer.tree` is explicitly a selected root-to-leaf path, not the full
+ontology.
+
+The parameter layer now:
+
+- completes every declared executable parameter group;
+- distinguishes explicit values, priors, and derived constraints;
+- keeps occlusion and occluder type as non-assumptions when stated in the text;
+- separates hidden, reveal, lane-entry, and conflict events;
+- computes TTC from sampled states instead of independently sampling it;
+- records hard visibility, placement, path-intersection, and direction constraints;
+- reports `scene_template_ready` separately from `sampled_scene_ready`.
 
 Single prompt example:
 
@@ -57,6 +97,6 @@ python -m sledge.script.language.run_hierarchical_language_pipeline \
 - `event_frame_verifier.py`: consistency checks and deterministic repair.
 - `event_frame_mapper.py`: compositional hazard specification.
 - `missing_info_filler.py`: legacy semantic-slot default completion.
-- `hierarchical_ontology.py`: recursive tree, legal transitions, and path resolver.
-- `hierarchical_pipeline.py`: default hierarchy-aware orchestration and leaf completion.
+- `hierarchical_ontology.py`: recursive tree, nuPlan projection, legal transitions, and path resolver.
+- `hierarchical_pipeline.py`: hierarchy-aware orchestration, event refinement, parameter completion, and constraints.
 - `direct_template_baseline.py`: no-EventFrame comparison baseline.
