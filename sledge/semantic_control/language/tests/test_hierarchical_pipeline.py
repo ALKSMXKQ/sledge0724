@@ -2,6 +2,7 @@
 
 from sledge.semantic_control.language.event_frame import (
     ActorFrame,
+    CompletedParameter,
     EgoEventFrame,
     EventFrame,
     MainEventFrame,
@@ -154,6 +155,93 @@ def test_hierarchical_completion_uses_full_parent_path() -> None:
     assert completed_spec["parameter_layer"]["completion_policy"] == (
         "recursive_parent_path_conditioned_completion"
     )
+
+
+def test_explicit_parameter_is_never_overwritten_by_hierarchy() -> None:
+    frame = _occluded_child_frame()
+    frame.completed_parameters["actor_speed_mps"] = CompletedParameter(
+        value=4.2,
+        unit="m/s",
+        source="user_input",
+        reason="explicit actor speed",
+    )
+    spec = _occluded_child_spec()
+    path = HierarchicalSceneResolver().resolve(frame, spec)
+
+    completed = HierarchicalParameterFiller().fill(spec, frame, path)["parameter_layer"]["completed"]
+
+    assert completed["actor_speed_mps"]["value"] == 4.2
+    assert completed["actor_speed_mps"]["source"] == "user_input"
+    assert completed["actor_speed_mps"]["is_assumption"] is False
+
+
+def test_distributional_source_side_list_is_safe_for_cut_in() -> None:
+    frame = EventFrame(
+        sentence="A vehicle cuts in aggressively from an adjacent lane with almost no room.",
+        main_actor=ActorFrame(text="vehicle", actor_class="vehicle"),
+        main_event=MainEventFrame(
+            event_type="lane_change_into_ego_lane",
+            motion_axis="merging",
+            source_relation="from_adjacent_lane",
+            target_relation="ego_lane",
+            event_location_relation="ahead_of",
+        ),
+        road_context=RoadContextFrame(road_type="straight_lane", lane_context="adjacent_lane"),
+    )
+    spec = {
+        "semantic_slots": {
+            "road_topology": "multi_lane_road",
+            "road_layout": "adjacent_lane_cut_in",
+            "actor_type": "vehicle",
+            "actor_role": "merging_actor",
+            "motion_geometry": "merging",
+            "fine_grained_conflict_type": "lane_change_into_ego_lane",
+            "source_side": ["left", "right"],
+            "target_path": "ego_lane",
+            "risk_level": "aggressive",
+        }
+    }
+
+    path = HierarchicalSceneResolver().resolve(frame, spec)
+
+    assert path.valid, path.issues
+    assert path.value("hazard_interaction") == "aggressive_cut_in"
+    assert path.value("source_region") in {"adjacent_left_lane", "adjacent_right_lane"}
+
+
+def test_roundabout_event_is_not_collapsed_to_generic_cut_in() -> None:
+    frame = EventFrame(
+        sentence="Ego enters a roundabout as a circulating vehicle closes the entry gap.",
+        main_actor=ActorFrame(text="circulating vehicle", actor_class="vehicle"),
+        ego_event=EgoEventFrame(ego_maneuver="enter_roundabout"),
+        main_event=MainEventFrame(
+            event_type="roundabout_entry_conflict",
+            motion_axis="merging",
+            source_relation="from_circulating_lane",
+            target_relation="roundabout_entry",
+            event_location_relation="at_roundabout_entry",
+        ),
+        road_context=RoadContextFrame(road_type="roundabout", lane_context="roundabout_entry"),
+    )
+    spec = {
+        "semantic_slots": {
+            "road_topology": "roundabout",
+            "road_layout": "roundabout_entry",
+            "actor_type": "vehicle",
+            "actor_role": "merging_actor",
+            "motion_geometry": "merging",
+            "fine_grained_conflict_type": "roundabout_entry_conflict",
+            "source_side": "roundabout_inside",
+            "target_path": "roundabout_entry",
+            "risk_level": "moderate",
+        }
+    }
+
+    path = HierarchicalSceneResolver().resolve(frame, spec)
+
+    assert path.valid, path.issues
+    assert path.value("hazard_interaction") == "roundabout_entry_conflict"
+    assert path.value("target_region") == "roundabout_entry"
 
 
 def test_serialized_hierarchy_keeps_legacy_spec_compatible() -> None:
