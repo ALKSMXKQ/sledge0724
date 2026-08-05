@@ -364,9 +364,17 @@ def _contains(text: str, terms: Sequence[str]) -> bool:
 
 
 def _clean(value: Any, default: str = "unknown") -> str:
-    if value in UNKNOWN_VALUES:
+    if value is None:
         return default
-    return str(value).strip().lower().replace("-", "_").replace(" ", "_")
+    if isinstance(value, str):
+        if value in UNKNOWN_VALUES:
+            return default
+        return value.strip().lower().replace("-", "_").replace(" ", "_") or default
+    if isinstance(value, (list, tuple, set)):
+        if len(value) == 1:
+            return _clean(next(iter(value)), default)
+        return default
+    return str(value).strip().lower().replace("-", "_").replace(" ", "_") or default
 
 
 def _first_allowed(candidate: str, allowed: Iterable[str], fallback: str) -> str:
@@ -641,6 +649,8 @@ class HierarchicalSceneResolver:
         occluded = bool(slots.get("occlusion_enabled", frame.occlusion.enabled))
 
         allowed = ACTOR_TYPE_TO_INTERACTIONS.get(actor_type, set())
+        if event == "roundabout_entry_conflict" and "roundabout_entry_conflict" in allowed:
+            return "roundabout_entry_conflict", "inferred", 0.97
         if occluded and "occluded_emergence" in allowed:
             return "occluded_emergence", "explicit", 0.98
         if actor_type in {"pedestrian", "child_pedestrian", "jogger", "wheelchair_user", "cyclist", "ebike_rider", "scooter_rider"}:
