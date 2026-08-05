@@ -1,10 +1,14 @@
-"""Default EventFrame pipeline with recursive parent-constrained semantics.
+"""EventFrame pipeline with nuPlan-compatible hierarchical semantics.
 
-This module keeps the established EventFrame parser and legacy hazard-spec
-layers intact, then adds a selected hierarchy path and hierarchy-conditioned
-parameter completion. Existing consumers can continue reading actor_layer,
-interaction_layer, motion_layer, and parameter_layer, while new consumers can
-read hierarchy_layer.tree or hierarchy_layer.selected_path.
+The module keeps the established EventFrame parser, verifier and legacy mapper,
+then adds four strict stages:
+
+1. resolve one parent-constrained semantic path;
+2. project linguistic actor descriptions to nuPlan/SLEDGE categories;
+3. complete a full executable *parameter template* with provenance and hard
+   geometric constraints; and
+4. report separately whether the semantic template is complete and whether a
+   concrete sampled scene has already passed kinematic checks.
 """
 
 from __future__ import annotations
@@ -28,6 +32,17 @@ from sledge.semantic_control.language.hierarchical_ontology import (
 from sledge.semantic_control.language.missing_info_filler import MissingInfoFiller
 
 
+PARAMETER_ALIASES: Dict[str, str] = {
+    "actor_speed": "actor_speed_mps",
+    "pedestrian_speed": "actor_speed_mps",
+    "ego_speed": "ego_speed_mps",
+    "initial_distance": "ego_distance_to_conflict_m",
+    "distance_to_conflict": "ego_distance_to_conflict_m",
+    "occluder_length": "occluder_length_m",
+    "occluder_width": "occluder_width_m",
+}
+
+
 @dataclass
 class HierarchicalPipelineResult:
     """Structured output returned by :class:`HierarchicalEventFramePipeline`."""
@@ -44,11 +59,12 @@ class HierarchicalPipelineResult:
 
 
 class HierarchicalParameterFiller:
-    """Complete numeric leaves using the already selected parent path.
+    """Complete executable leaves from an already selected hierarchy path.
 
-    The legacy semantic-slot filler runs first. This class refines only values
-    whose source is not explicit user input and records the complete parent path
-    that conditioned each refinement.
+    Ranges and derived expressions form a sampling template.  They are not
+    misreported as a concrete scene.  A separate downstream sampler must choose
+    one value per range and run the hard constraints before the scene is ready
+    for nuPlan simulation.
     """
 
     def __init__(self, base_filler: Optional[MissingInfoFiller] = None) -> None:
@@ -62,40 +78,28 @@ class HierarchicalParameterFiller:
     ) -> Dict[str, Any]:
         out = self.base_filler.fill(spec, frame)
         params = out.setdefault("parameter_layer", {})
-        completed: Dict[str, Dict[str, Any]] = dict(params.get("completed", {}) or {})
+        completed: Dict[str, Dict[str, Any]] = self._normalize_completed(
+            dict(params.get("completed", {}) or {}), frame
+        )
         values = hierarchy.values
+        projection = hierarchy.nuplan_projection()
 
-        for name, entry in list(completed.items()):
-            if not isinstance(entry, dict):
-                entry = {"value": entry}
-                completed[name] = entry
-            entry.setdefault("unit", "")
-            entry.setdefault("source", "unknown")
-            entry.setdefault("reason", "")
-            entry.setdefault("confidence", 0.6 if entry["source"] != "user_input" else 1.0)
-            entry.setdefault("evidence", [frame.sentence] if entry["source"] == "user_input" else [])
-            entry.setdefault("conditioned_on", {})
-            entry.setdefault("is_assumption", entry["source"] != "user_input")
-            entry.setdefault("alternatives", [])
-
-        # The legacy filler adds semantic priors before parser-provided values.
-        # Re-apply explicitly stated EventFrame parameters here so a hierarchy
-        # prior can never replace a value that came from the user's sentence.
-        for name, parameter in frame.completed_parameters.items():
+        for original_name, parameter in frame.completed_parameters.items():
             source = str(parameter.source or "unknown")
             if source not in {"user_input", "explicit", "llm_explicit"}:
                 continue
-            completed[name] = {
-                "value": parameter.value,
-                "unit": parameter.unit,
-                "source": "user_input",
-                "reason": parameter.reason or "explicit parameter from EventFrame",
-                "confidence": 1.0,
-                "evidence": [frame.sentence],
-                "conditioned_on": {},
-                "is_assumption": False,
-                "alternatives": [],
-            }
+            name = PARAMETER_ALIASES.get(original_name, original_name)
+            completed[name] = self._entry(
+                parameter.value,
+                unit=parameter.unit,
+                source="user_input",
+                reason=parameter.reason or "explicit parameter from EventFrame",
+                confidence=1.0,
+                evidence=[frame.sentence],
+                conditioned_on={},
+                condition_path="",
+                is_assumption=False,
+            )
 
         def put(
             name: str,
@@ -105,6 +109,9 @@ class HierarchicalParameterFiller:
             reason: str,
             through: str,
             confidence: float,
+            source: str = "hierarchical_prior",
+            is_assumption: bool = True,
+            evidence: Optional[List[str]] = None,
             alternatives: Optional[List[Any]] = None,
             overwrite_inferred: bool = True,
         ) -> None:
@@ -113,27 +120,83 @@ class HierarchicalParameterFiller:
                 return
             if current and not overwrite_inferred:
                 return
-            conditioned_on = self._conditions_through(hierarchy, through)
-            completed[name] = {
-                "value": value,
-                "unit": unit,
-                "source": "hierarchical_prior",
-                "reason": reason,
-                "confidence": max(0.0, min(float(confidence), 1.0)),
-                "evidence": [],
-                "conditioned_on": conditioned_on,
-                "condition_path": hierarchy.condition_path(through=through),
-                "is_assumption": True,
-                "alternatives": list(alternatives or []),
-            }
+            completed[name] = self._entry(
+                value,
+                unit=unit,
+                source=source,
+                reason=reason,
+                confidence=confidence,
+                evidence=list(evidence or []),
+                conditioned_on=self._conditions_through(hierarchy, through),
+                condition_path=hierarchy.condition_path(through=through),
+                is_assumption=is_assumption,
+                alternatives=list(alternatives or []),
+            )
 
         actor = values.get("primary_actor_type", "unknown")
         interaction = values.get("hazard_interaction", "unknown")
         traffic_space = values.get("ego_traffic_space", "unknown")
         auxiliary = values.get("auxiliary_entity", "none")
-        direction = values.get("motion_direction", "crossing_unspecified")
+        source_region = values.get("source_region", "unknown")
+        direction = values.get("motion_direction", "toward_ego_path")
         risk = values.get("risk_level", "moderate")
         visibility = values.get("visibility", "fully_visible")
+
+        put(
+            "lane_width_m",
+            [3.2, 3.8],
+            unit="m",
+            reason="nuPlan-compatible lane-width sampling range",
+            through="ego_traffic_space",
+            confidence=0.78,
+        )
+        put(
+            "lane_count",
+            [1, 2] if traffic_space in {"single_lane", "curbside_zone", "bidirectional_road"} else [2, 4],
+            reason=f"lane-count prior for {traffic_space}",
+            through="ego_traffic_space",
+            confidence=0.7,
+        )
+        put(
+            "road_curvature",
+            [-0.005, 0.005],
+            unit="1/m",
+            reason="near-straight local road curvature prior",
+            through="road_topology",
+            confidence=0.68,
+        )
+
+        ego_distance = [6.0, 14.0] if risk in {"aggressive", "critical"} else [10.0, 24.0]
+        put(
+            "ego_distance_to_conflict_m",
+            ego_distance,
+            unit="m",
+            reason="distance from ego origin to the selected conflict point",
+            through="risk_level",
+            confidence=0.78,
+        )
+        put(
+            "conflict_point_xy",
+            {
+                "frame": "ego_local",
+                "x_m": {"reference": "ego_distance_to_conflict_m"},
+                "y_m": [-0.5, 0.5],
+            },
+            unit="m",
+            reason="conflict point lies ahead on the ego path",
+            through="target_region",
+            confidence=0.95,
+            source="derived_constraint",
+            is_assumption=False,
+        )
+        put(
+            "ego_acceleration_mps2",
+            [0.0, 0.0],
+            unit="m/s^2",
+            reason="ego initially follows a constant-speed baseline",
+            through="ego_traffic_space",
+            confidence=0.8,
+        )
 
         actor_speed = self._actor_speed_prior(actor, risk)
         if actor_speed is not None:
@@ -141,72 +204,148 @@ class HierarchicalParameterFiller:
                 "actor_speed_mps",
                 actor_speed,
                 unit="m/s",
-                reason=f"actor-speed prior for {actor} under {risk} risk",
+                reason=f"nuPlan/SLEDGE actor-speed prior for executable category {actor}",
                 through="risk_level",
-                confidence=0.84 if actor != "generic_vehicle" else 0.62,
+                confidence=0.86,
             )
-
         ego_speed = self._ego_speed_prior(traffic_space, risk)
         if ego_speed is not None:
             put(
                 "ego_speed_mps",
                 ego_speed,
                 unit="m/s",
-                reason=f"ego-speed prior for {traffic_space} under {risk} risk",
+                reason=f"ego-speed prior for {traffic_space} under {risk} semantic risk",
                 through="risk_level",
                 confidence=0.76,
             )
 
+        put(
+            "actor_acceleration_mps2",
+            [0.0, 1.0] if actor == "pedestrian" else [-1.0, 1.0],
+            unit="m/s^2",
+            reason="bounded initial actor acceleration prior",
+            through="primary_actor_type",
+            confidence=0.68,
+        )
+        put(
+            "actor_start_time_s",
+            [0.2, 2.0],
+            unit="s",
+            reason="actor motion begins after the ego baseline is established",
+            through="trigger_event",
+            confidence=0.72,
+        )
+        put(
+            "minimum_clearance_m",
+            [0.5, 2.0],
+            unit="m",
+            reason="non-collision safety clearance range",
+            through="risk_level",
+            confidence=0.7,
+        )
+        put(
+            "braking_deceleration_mps2",
+            [3.0, 7.0],
+            unit="m/s^2",
+            reason="candidate ego braking envelope; exact response is selected after kinematic evaluation",
+            through="ego_required_response",
+            confidence=0.72,
+        )
+
         if interaction in {"path_crossing", "enter_ego_lane", "occluded_emergence"}:
-            if direction in {"left_to_right", "right_to_left"}:
+            if interaction == "occluded_emergence":
                 put(
                     "crossing_direction",
-                    direction,
-                    reason="direction inherited from the selected source-region branch",
+                    "occluder_to_ego_path",
+                    reason="the actor moves from its selected occluder toward the ego path",
                     through="motion_direction",
-                    confidence=0.9,
+                    confidence=1.0,
+                    source="derived_constraint",
+                    is_assumption=False,
+                )
+                put(
+                    "actor_heading",
+                    {
+                        "frame": "ego_local",
+                        "definition": "unit_vector(occluder_position, nearest_point_on_ego_path)",
+                    },
+                    reason="heading is uniquely derived from occluder position toward the ego path",
+                    through="motion_direction",
+                    confidence=1.0,
+                    source="derived_constraint",
+                    is_assumption=False,
                 )
             else:
                 put(
                     "crossing_direction",
-                    ["left_to_right", "right_to_left"],
-                    reason="parent path determines crossing but not the originating side",
+                    direction,
+                    reason="direction inherited from the selected spatial branch",
                     through="motion_direction",
-                    confidence=0.5,
-                    alternatives=["left_to_right", "right_to_left"],
+                    confidence=0.88,
+                    source="derived_constraint" if direction == "toward_ego_path" else "hierarchical_prior",
+                    is_assumption=direction != "toward_ego_path",
+                )
+                put(
+                    "actor_heading",
+                    {"frame": "ego_local", "definition": direction},
+                    reason="heading follows the selected crossing direction",
+                    through="motion_direction",
+                    confidence=0.85,
                 )
 
         if interaction == "occluded_emergence" or visibility in {"partially_occluded", "fully_occluded"}:
-            reveal = [3.0, 8.0] if risk in {"aggressive", "critical"} else [5.0, 12.0]
-            put(
-                "reveal_distance_m",
-                reveal,
-                unit="m",
-                reason="reveal-distance prior conditioned on occlusion and risk branch",
-                through="risk_level",
-                confidence=0.82,
-            )
+            occluder_explicit = bool(frame.occlusion.enabled) and str(frame.occlusion.occluder_type or "unknown") not in {"", "unknown"}
+            occluder_type = self._occluder_parameter_type(auxiliary)
             put(
                 "occlusion_enabled",
                 True,
-                reason="occluded-emergence branch requires an active occluder",
+                reason="the prompt explicitly defines an occluded-emergence relation",
                 through="visibility",
-                confidence=0.99,
+                confidence=1.0,
+                source="user_input" if frame.occlusion.enabled else "derived_constraint",
+                is_assumption=False,
+                evidence=[frame.occlusion.evidence_text or frame.sentence],
             )
             put(
                 "occluder_type",
-                self._occluder_parameter_type(auxiliary),
-                reason="auxiliary-entity leaf determines the simulator occluder class",
+                occluder_type,
+                reason="the prompt occluder is normalized to a nuPlan/SLEDGE-supported category",
                 through="auxiliary_entity",
-                confidence=0.92 if auxiliary != "generic_occluder" else 0.62,
+                confidence=0.99 if occluder_explicit else 0.72,
+                source="user_input" if occluder_explicit else "hierarchical_prior",
+                is_assumption=not occluder_explicit,
+                evidence=[frame.occlusion.evidence_text or frame.sentence] if occluder_explicit else [],
+            )
+            put(
+                "occluder_side",
+                self._occluder_side_value(source_region),
+                reason="one occluder side is sampled once; direction is then derived from that position toward ego",
+                through="source_region",
+                confidence=0.92 if source_region in {"left_side", "right_side"} else 0.65,
+                source="derived_constraint" if source_region in {"left_side", "right_side"} else "categorical_prior",
+                alternatives=[] if source_region in {"left_side", "right_side"} else ["left", "right"],
             )
             put(
                 "occluder_lateral_offset_m",
                 [1.0, 4.0],
                 unit="m",
-                reason="roadside/adjacent placement prior for the selected occluder branch",
+                reason="roadside offset from the ego-path boundary",
                 through="auxiliary_entity",
                 confidence=0.72,
+            )
+            put(
+                "occluder_position",
+                {
+                    "frame": "ego_local",
+                    "x_m": [4.0, 12.0],
+                    "side": {"reference": "occluder_side"},
+                    "lateral_offset_m": {"reference": "occluder_lateral_offset_m"},
+                    "placement": "outside_ego_lane",
+                },
+                unit="m",
+                reason="occluder is placed roadside and ahead of ego",
+                through="auxiliary_entity",
+                confidence=0.82,
             )
             length, width = self._occluder_size_prior(auxiliary)
             put(
@@ -225,65 +364,246 @@ class HierarchicalParameterFiller:
                 through="auxiliary_entity",
                 confidence=0.76,
             )
+            put(
+                "actor_initial_position",
+                {
+                    "frame": "ego_local",
+                    "relation": "behind_occluder_away_from_ego_path",
+                    "occluder_reference": "occluder_position",
+                    "hidden_offset_m": [0.5, 2.0],
+                },
+                unit="m",
+                reason="pedestrian begins behind the occluder on the side away from the ego path",
+                through="auxiliary_entity",
+                confidence=0.96,
+                source="derived_constraint",
+                is_assumption=False,
+            )
+            reveal = [3.0, 8.0] if risk in {"aggressive", "critical"} else [5.0, 12.0]
+            put(
+                "reveal_distance_m",
+                reveal,
+                unit="m",
+                reason="ego-to-conflict distance when the actor first clears the occluder",
+                through="risk_level",
+                confidence=0.82,
+            )
+            put(
+                "initial_gap_m",
+                {"definition": "distance(ego_position, actor_initial_position)"},
+                unit="m",
+                reason="initial gap is derived after actor and occluder positions are sampled",
+                through="auxiliary_entity",
+                confidence=1.0,
+                source="derived_constraint",
+                is_assumption=False,
+            )
+            put(
+                "time_to_collision_s",
+                {
+                    "definition": "ego_distance_to_conflict_m / max(ego_speed_mps, epsilon)",
+                    "evaluate_at": "actor_reveal_time",
+                },
+                unit="s",
+                reason="TTC is computed after sampling rather than independently sampled",
+                through="risk_level",
+                confidence=1.0,
+                source="derived_constraint",
+                is_assumption=False,
+            )
+
+        if "actor_initial_position" not in completed:
+            put(
+                "actor_initial_position",
+                {"frame": "ego_local", "relation": "source_region", "source_region": source_region},
+                unit="m",
+                reason="actor start position is sampled inside the selected source region",
+                through="source_region",
+                confidence=0.7,
+            )
+        if "actor_heading" not in completed:
+            put(
+                "actor_heading",
+                {"frame": "ego_local", "definition": direction},
+                reason="actor heading follows the selected motion direction",
+                through="motion_direction",
+                confidence=0.72,
+            )
+        if "occluder_position" not in completed:
+            put(
+                "occluder_position",
+                None,
+                unit="m",
+                reason="no occluder is active for this branch",
+                through="auxiliary_entity",
+                confidence=1.0,
+                source="not_applicable",
+                is_assumption=False,
+            )
+        if "occluder_length_m" not in completed:
+            put(
+                "occluder_length_m",
+                0.0,
+                unit="m",
+                reason="no occluder is active for this branch",
+                through="auxiliary_entity",
+                confidence=1.0,
+                source="not_applicable",
+                is_assumption=False,
+            )
+        if "occluder_width_m" not in completed:
+            put(
+                "occluder_width_m",
+                0.0,
+                unit="m",
+                reason="no occluder is active for this branch",
+                through="auxiliary_entity",
+                confidence=1.0,
+                source="not_applicable",
+                is_assumption=False,
+            )
+        if "occluder_lateral_offset_m" not in completed:
+            put(
+                "occluder_lateral_offset_m",
+                0.0,
+                unit="m",
+                reason="no occluder is active for this branch",
+                through="auxiliary_entity",
+                confidence=1.0,
+                source="not_applicable",
+                is_assumption=False,
+            )
+        if "reveal_distance_m" not in completed:
+            put(
+                "reveal_distance_m",
+                None,
+                unit="m",
+                reason="no reveal event is active for this branch",
+                through="visibility",
+                confidence=1.0,
+                source="not_applicable",
+                is_assumption=False,
+            )
+        if "initial_gap_m" not in completed:
+            put(
+                "initial_gap_m",
+                {"definition": "distance(ego_position, actor_initial_position)"},
+                unit="m",
+                reason="initial gap is derived from sampled states",
+                through="source_region",
+                confidence=1.0,
+                source="derived_constraint",
+                is_assumption=False,
+            )
+        if "time_to_collision_s" not in completed:
+            put(
+                "time_to_collision_s",
+                {"definition": "relative_distance / max(closing_speed, epsilon)"},
+                unit="s",
+                reason="TTC is derived from sampled states",
+                through="risk_level",
+                confidence=1.0,
+                source="derived_constraint",
+                is_assumption=False,
+            )
 
         if interaction in {"cut_in", "aggressive_cut_in", "lane_change", "lane_encroachment"}:
-            gap = [3.0, 10.0] if interaction == "aggressive_cut_in" or risk in {"aggressive", "critical"} else [7.0, 20.0]
             put(
                 "initial_longitudinal_gap_m",
-                gap,
+                [3.0, 10.0] if interaction == "aggressive_cut_in" else [7.0, 20.0],
                 unit="m",
                 reason="gap prior inherited from the vehicle cut-in branch",
                 through="risk_level",
                 confidence=0.8,
             )
-            source_region = values.get("source_region", "unknown")
-            side = "left" if source_region == "adjacent_left_lane" else "right" if source_region == "adjacent_right_lane" else ["left", "right"]
+        if interaction in {"gradual_braking", "hard_braking", "sudden_stop"}:
             put(
-                "source_side",
-                side,
-                reason="source lane inherited from the spatial branch",
-                through="source_region",
-                confidence=0.9 if isinstance(side, str) else 0.5,
-                alternatives=[] if isinstance(side, str) else ["left", "right"],
-            )
-
-        if interaction in {"gradual_braking", "hard_braking", "sudden_stop", "stationary_lead"}:
-            deceleration = [4.0, 9.0] if interaction in {"hard_braking", "sudden_stop"} else [2.0, 5.0]
-            if interaction != "stationary_lead":
-                put(
-                    "lead_deceleration_mps2",
-                    deceleration,
-                    unit="m/s^2",
-                    reason=f"deceleration prior for {interaction}",
-                    through="hazard_interaction",
-                    confidence=0.84,
-                )
-            headway = [6.0, 18.0] if risk in {"aggressive", "critical"} else [12.0, 30.0]
-            put(
-                "initial_headway_m",
-                headway,
-                unit="m",
-                reason="headway prior conditioned on the longitudinal risk branch",
-                through="risk_level",
-                confidence=0.79,
-            )
-
-        if interaction in {"left_turn_across_oncoming", "oncoming_path_conflict", "wrong_way_approach"}:
-            put(
-                "initial_oncoming_distance_m",
-                [12.0, 30.0] if risk in {"aggressive", "critical"} else [20.0, 45.0],
-                unit="m",
-                reason="oncoming-distance prior inherited from the oncoming branch",
-                through="risk_level",
-                confidence=0.8,
+                "lead_deceleration_mps2",
+                [4.0, 9.0] if interaction in {"hard_braking", "sudden_stop"} else [2.0, 5.0],
+                unit="m/s^2",
+                reason=f"deceleration prior for {interaction}",
+                through="hazard_interaction",
+                confidence=0.84,
             )
 
         params["completed"] = completed
-        params["completion_policy"] = "recursive_parent_path_conditioned_completion"
+        params["completion_policy"] = "nuplan_projected_parent_path_conditioned_template"
         params["hierarchical_context"] = dict(values)
         params["hierarchical_path_signature"] = hierarchy.condition_path()
+        params["parameter_constraints"] = self._parameter_constraints(interaction)
+        self._synchronize_missing(params, completed)
+
+        required_parameters = {
+            name
+            for names in hierarchy.executable_parameter_groups.values()
+            for name in names
+        }
+        missing_template_parameters = sorted(required_parameters - set(completed))
+        params["template_required_parameters"] = sorted(required_parameters)
+        params["template_missing_parameters"] = missing_template_parameters
+        params["parameter_template_complete"] = not missing_template_parameters
+
         out["parameter_layer"] = params
+        out["nuplan_layer"] = self._nuplan_layer(projection, completed, auxiliary)
+        out["readiness"] = {
+            "semantic_understanding": "passed" if hierarchy.valid else "failed",
+            "hierarchical_path": "passed" if hierarchy.valid else "failed",
+            "nuplan_category_projection": "passed" if projection.get("compatible") else "failed",
+            "parameter_template": "complete" if not missing_template_parameters else "incomplete",
+            "kinematic_consistency": "pending_concrete_sampling",
+            "scene_template_ready": hierarchy.valid and projection.get("compatible", False) and not missing_template_parameters,
+            "sampled_scene_ready": False,
+        }
         return out
+
+    @staticmethod
+    def _entry(
+        value: Any,
+        *,
+        unit: str,
+        source: str,
+        reason: str,
+        confidence: float,
+        evidence: List[str],
+        conditioned_on: Mapping[str, str],
+        condition_path: str,
+        is_assumption: bool,
+        alternatives: Optional[List[Any]] = None,
+    ) -> Dict[str, Any]:
+        return {
+            "value": value,
+            "unit": unit,
+            "source": source,
+            "reason": reason,
+            "confidence": max(0.0, min(float(confidence), 1.0)),
+            "evidence": list(evidence),
+            "conditioned_on": dict(conditioned_on),
+            "condition_path": condition_path,
+            "is_assumption": bool(is_assumption),
+            "alternatives": list(alternatives or []),
+        }
+
+    def _normalize_completed(
+        self, completed: Dict[str, Any], frame: EventFrame
+    ) -> Dict[str, Dict[str, Any]]:
+        normalized: Dict[str, Dict[str, Any]] = {}
+        for original_name, raw_entry in completed.items():
+            name = PARAMETER_ALIASES.get(original_name, original_name)
+            entry = dict(raw_entry) if isinstance(raw_entry, dict) else {"value": raw_entry}
+            source = str(entry.get("source", "unknown"))
+            normalized[name] = self._entry(
+                entry.get("value"),
+                unit=str(entry.get("unit", "")),
+                source=source,
+                reason=str(entry.get("reason", "")),
+                confidence=float(entry.get("confidence", 1.0 if source == "user_input" else 0.6)),
+                evidence=list(entry.get("evidence", [frame.sentence] if source == "user_input" else []) or []),
+                conditioned_on=dict(entry.get("conditioned_on", {}) or {}),
+                condition_path=str(entry.get("condition_path", "")),
+                is_assumption=bool(entry.get("is_assumption", source != "user_input")),
+                alternatives=list(entry.get("alternatives", []) or []),
+            )
+        return normalized
 
     @staticmethod
     def _conditions_through(path: HierarchicalScenePath, through: str) -> Dict[str, str]:
@@ -297,13 +617,8 @@ class HierarchicalParameterFiller:
     @staticmethod
     def _actor_speed_prior(actor: str, risk: str) -> Optional[List[float]]:
         priors: Dict[str, List[float]] = {
-            "pedestrian": [1.0, 2.2],
-            "child_pedestrian": [1.8, 3.2] if risk in {"aggressive", "critical"} else [1.2, 2.4],
-            "jogger": [2.5, 4.5],
-            "wheelchair_user": [0.6, 1.5],
+            "pedestrian": [1.0, 2.0] if risk in {"aggressive", "critical"} else [0.8, 1.6],
             "cyclist": [3.0, 7.0],
-            "ebike_rider": [4.0, 9.0],
-            "scooter_rider": [3.0, 8.0],
             "lead_vehicle": [5.0, 20.0],
             "adjacent_vehicle": [8.0, 22.0],
             "merging_vehicle": [8.0, 22.0],
@@ -349,14 +664,14 @@ class HierarchicalParameterFiller:
     @staticmethod
     def _occluder_parameter_type(auxiliary: str) -> str:
         mapping = {
-            "parked_car_occluder": "parked_vehicle",
-            "parked_truck_occluder": "truck",
-            "bus_occluder": "bus",
-            "van_occluder": "van",
-            "barrier_occluder": "barrier",
-            "vegetation_occluder": "vegetation",
-            "building_edge_occluder": "building_edge",
-            "generic_occluder": "vehicle",
+            "parked_car_occluder": "vehicle",
+            "parked_truck_occluder": "vehicle",
+            "bus_occluder": "vehicle",
+            "van_occluder": "vehicle",
+            "generic_vehicle_occluder": "vehicle",
+            "barrier_occluder": "static_object",
+            "vegetation_occluder": "static_object",
+            "building_edge_occluder": "static_object",
         }
         return mapping.get(auxiliary, "vehicle")
 
@@ -370,9 +685,128 @@ class HierarchicalParameterFiller:
             "barrier_occluder": ([2.0, 8.0], [0.3, 1.0]),
             "vegetation_occluder": ([2.0, 8.0], [1.0, 4.0]),
             "building_edge_occluder": ([5.0, 20.0], [2.0, 8.0]),
-            "generic_occluder": ([4.0, 8.0], [1.8, 2.5]),
+            "generic_vehicle_occluder": ([4.0, 8.0], [1.8, 2.5]),
         }
-        return priors.get(auxiliary, priors["generic_occluder"])
+        return priors.get(auxiliary, priors["generic_vehicle_occluder"])
+
+    @staticmethod
+    def _occluder_side_value(source_region: str) -> Any:
+        if source_region == "left_side":
+            return "left"
+        if source_region == "right_side":
+            return "right"
+        return {"distribution": "categorical", "values": ["left", "right"], "sample_once": True}
+
+    @staticmethod
+    def _parameter_constraints(interaction: str) -> List[Dict[str, Any]]:
+        constraints: List[Dict[str, Any]] = [
+            {
+                "id": "conflict_on_ego_path",
+                "type": "hard",
+                "expression": "conflict_point_xy.y_m lies within ego lane boundaries",
+            },
+            {
+                "id": "ttc_is_derived",
+                "type": "derived",
+                "expression": "time_to_collision_s is calculated from sampled positions and velocities",
+            },
+            {
+                "id": "response_after_kinematics",
+                "type": "decision",
+                "expression": "choose brake vs emergency_brake after TTC and stopping-distance evaluation",
+            },
+        ]
+        if interaction == "occluded_emergence":
+            constraints.extend(
+                [
+                    {
+                        "id": "nuplan_pedestrian_category",
+                        "type": "hard",
+                        "expression": "primary actor is TrackedObjectType.PEDESTRIAN and is stored in SledgeVectorRaw.pedestrians",
+                    },
+                    {
+                        "id": "occluder_outside_ego_lane",
+                        "type": "hard",
+                        "expression": "occluder footprint does not overlap the ego lane center corridor",
+                    },
+                    {
+                        "id": "actor_hidden_before_reveal",
+                        "type": "hard",
+                        "expression": "line_of_sight(ego, actor) intersects occluder before reveal_time_s",
+                    },
+                    {
+                        "id": "unique_relative_direction",
+                        "type": "hard",
+                        "expression": "actor velocity points from occluder_position to nearest_point_on_ego_path",
+                    },
+                    {
+                        "id": "actor_path_intersects_ego_path",
+                        "type": "hard",
+                        "expression": "pedestrian trajectory intersects ego path at conflict_point_xy",
+                    },
+                    {
+                        "id": "reveal_before_conflict",
+                        "type": "hard",
+                        "expression": "0 < reveal_distance_m <= ego_distance_to_conflict_m",
+                    },
+                ]
+            )
+        return constraints
+
+    @staticmethod
+    def _synchronize_missing(
+        params: Dict[str, Any], completed: Mapping[str, Dict[str, Any]]
+    ) -> None:
+        original_required = list(params.get("required_missing", []) or [])
+        original_defaultable = list(params.get("defaultable_missing", []) or [])
+        resolved: List[Dict[str, str]] = []
+        unresolved: List[str] = []
+        for original_name in original_required:
+            canonical = PARAMETER_ALIASES.get(str(original_name), str(original_name))
+            if canonical in completed:
+                resolved.append({"original_name": str(original_name), "resolved_as": canonical})
+            else:
+                unresolved.append(canonical)
+        params["original_required_missing"] = original_required
+        params["original_defaultable_missing"] = original_defaultable
+        params["resolved_missing"] = resolved
+        params["required_missing"] = sorted(set(unresolved))
+        params["unresolved_required"] = sorted(set(unresolved))
+
+    @staticmethod
+    def _nuplan_layer(
+        projection: Mapping[str, Any],
+        completed: Mapping[str, Dict[str, Any]],
+        auxiliary: str,
+    ) -> Dict[str, Any]:
+        return {
+            "schema_version": "sledge_vector_raw_projection_v1",
+            "coordinate_frame": "ego_local",
+            "actor": {
+                "semantic_detail": projection.get("language_actor_detail", "unspecified"),
+                "nuplan_category": projection.get("actor_category"),
+                "tracked_object_type": projection.get("tracked_object_type"),
+                "sledge_collection": projection.get("sledge_collection"),
+                "state_mapping": {
+                    "position": "parameter_layer.completed.actor_initial_position.value",
+                    "heading": "parameter_layer.completed.actor_heading.value",
+                    "speed": "parameter_layer.completed.actor_speed_mps.value",
+                    "acceleration": "parameter_layer.completed.actor_acceleration_mps2.value",
+                },
+            },
+            "occluder": {
+                "semantic_type": auxiliary,
+                "nuplan_category": projection.get("occluder_category"),
+                "sledge_collection": projection.get("occluder_sledge_collection"),
+                "state_mapping": {
+                    "position": "parameter_layer.completed.occluder_position.value",
+                    "length": "parameter_layer.completed.occluder_length_m.value",
+                    "width": "parameter_layer.completed.occluder_width_m.value",
+                },
+            },
+            "compatible": bool(projection.get("compatible", False)),
+            "warnings": list(projection.get("warnings", []) or []),
+        }
 
 
 class HierarchicalEventFramePipeline:
@@ -414,16 +848,24 @@ class HierarchicalEventFramePipeline:
         spec = self.mapper.map(frame)
         hierarchy = self.hierarchy_resolver.resolve(frame, spec)
         spec = attach_hierarchy(spec, hierarchy)
+        spec = self._project_legacy_layers_to_nuplan(spec, hierarchy)
+        spec = self._refine_event_sequence(spec, frame, hierarchy)
         spec = self.parameter_filler.fill(spec, frame, hierarchy)
 
         legacy_ok, legacy_errors = validate_spec(spec)
         hierarchy_errors = list(hierarchy.issues)
+        hierarchy_ok, serialized_errors = validate_hierarchical_spec(spec)
+        hierarchy_errors.extend(error for error in serialized_errors if error not in hierarchy_errors)
+
         validation = spec.setdefault("validation_layer", {})
         validation["legacy_spec_valid"] = legacy_ok
         validation["legacy_spec_errors"] = list(legacy_errors)
-        validation["hierarchy_valid"] = hierarchy.valid
+        validation["hierarchy_valid"] = hierarchy_ok
         validation["hierarchy_issues"] = hierarchy_errors
-        validation["pipeline_design"] = "eventframe_recursive_hierarchical_tree"
+        validation["nuplan_projection_valid"] = bool(
+            spec.get("nuplan_layer", {}).get("compatible", False)
+        )
+        validation["pipeline_design"] = "eventframe_v6_nuplan_parent_constrained_tree"
 
         return HierarchicalPipelineResult(
             frame=frame,
@@ -437,6 +879,103 @@ class HierarchicalEventFramePipeline:
         result = self.parse_to_result(sentence)
         return result.frame, result.spec
 
+    @staticmethod
+    def _project_legacy_layers_to_nuplan(
+        spec: Dict[str, Any], hierarchy: HierarchicalScenePath
+    ) -> Dict[str, Any]:
+        out = deepcopy(spec)
+        projection = hierarchy.nuplan_projection()
+        values = hierarchy.values
+
+        semantic_slots = out.setdefault("semantic_slots", {})
+        semantic_slots["actor_type"] = projection["actor_category"]
+        semantic_slots["nuplan_actor_category"] = projection["actor_category"]
+        semantic_slots["language_actor_detail"] = projection["language_actor_detail"]
+        semantic_slots["motion_direction"] = values.get("motion_direction", "unknown")
+
+        actor_layer = out.setdefault("actor_layer", {})
+        actor_layer["primary_actor"] = projection["actor_category"]
+        actor_layer["base_actor_type"] = projection["actor_category"]
+        actor_layer["nuplan_tracked_object_type"] = projection["tracked_object_type"]
+        actor_layer["sledge_collection"] = projection["sledge_collection"]
+        actor_layer["language_actor_detail"] = projection["language_actor_detail"]
+
+        motion_layer = out.setdefault("motion_layer", {})
+        motion_layer["motion_direction"] = values.get("motion_direction", "unknown")
+        return out
+
+    @staticmethod
+    def _refine_event_sequence(
+        spec: Dict[str, Any], frame: EventFrame, hierarchy: HierarchicalScenePath
+    ) -> Dict[str, Any]:
+        out = deepcopy(spec)
+        if hierarchy.value("hazard_interaction") != "occluded_emergence":
+            return out
+
+        actor = hierarchy.nuplan_projection().get("actor_category", "pedestrian")
+        auxiliary = hierarchy.value("auxiliary_entity")
+        response = hierarchy.value("ego_required_response")
+        evidence = frame.sentence
+        sequence = [
+            {
+                "order": 1,
+                "actor": "ego",
+                "event_type": "ego_driving",
+                "action": frame.ego_event.ego_maneuver or "drive_forward",
+                "relation_to_previous": "start",
+                "evidence_text": frame.ego_event.evidence_text,
+            },
+            {
+                "order": 2,
+                "actor": actor,
+                "event_type": "actor_occluded",
+                "action": f"hidden_behind_{auxiliary}",
+                "relation_to_previous": "during_ego_baseline",
+                "evidence_text": frame.occlusion.evidence_text or evidence,
+            },
+            {
+                "order": 3,
+                "actor": actor,
+                "event_type": "occluded_actor_becomes_visible",
+                "action": "emerge_from_occluder_toward_ego_path",
+                "relation_to_previous": "after_hidden_state",
+                "evidence_text": frame.main_event.evidence_text or evidence,
+            },
+            {
+                "order": 4,
+                "actor": actor,
+                "event_type": "enter_ego_lane",
+                "action": "enter_ego_lane_from_occluder",
+                "relation_to_previous": "after_reveal",
+                "evidence_text": frame.main_event.evidence_text or evidence,
+            },
+            {
+                "order": 5,
+                "actor": "ego_and_pedestrian",
+                "event_type": "conflict_point_approach",
+                "action": "approach_shared_conflict_point",
+                "relation_to_previous": "after_lane_entry",
+                "evidence_text": "derived: paths intersect at conflict_point_xy",
+            },
+            {
+                "order": 6,
+                "actor": "ego",
+                "event_type": "ego_response",
+                "action": response,
+                "relation_to_previous": "after_kinematic_evaluation",
+                "evidence_text": "derived: select brake severity after TTC and stopping-distance check",
+            },
+        ]
+        event_layer = out.setdefault("event_layer", {})
+        event_layer["event_sequence"] = sequence
+        event_layer["event_sequence_labels"] = [
+            f"{step['order']}:{step['actor']}:{step['event_type']}:{step['action']}"
+            for step in sequence
+        ]
+        event_layer["num_events"] = len(sequence)
+        event_layer["sequence_policy"] = "occlusion_reveal_lane_entry_are_distinct_events"
+        return out
+
 
 def attach_hierarchy(spec: Dict[str, Any], hierarchy: HierarchicalScenePath) -> Dict[str, Any]:
     """Attach a hierarchy without removing legacy spec layers."""
@@ -445,13 +984,13 @@ def attach_hierarchy(spec: Dict[str, Any], hierarchy: HierarchicalScenePath) -> 
     out["schema_version"] = hierarchy.schema_version
     out["hierarchy_layer"] = hierarchy.to_dict()
     out.setdefault("validation_layer", {})["composition_policy"] = (
-        "recursive_parent_constrained_hierarchy_with_legacy_projection"
+        "nuplan_projected_recursive_parent_constrained_hierarchy"
     )
     return out
 
 
 def validate_hierarchical_spec(spec: Mapping[str, Any]) -> Tuple[bool, List[str]]:
-    """Validate the serialized hierarchy layer independently of EventFrame."""
+    """Validate the serialized hierarchy and nuPlan projection."""
 
     layer = dict(spec.get("hierarchy_layer", {}) or {})
     issues: List[str] = list(layer.get("issues", []) or [])
@@ -485,6 +1024,27 @@ def validate_hierarchical_spec(spec: Mapping[str, Any]) -> Tuple[bool, List[str]
             issues.append(f"hierarchy_level_mismatch:{node.get('node_type')}={node.get('level')}")
         if node.get("value") in {None, "", "unknown"}:
             issues.append(f"hierarchy_unknown_value:{node.get('node_type')}")
+        allowed_at_level = set(node.get("allowed_values_at_level", []) or [])
+        if allowed_at_level and node.get("value") not in allowed_at_level:
+            issues.append(f"hierarchy_value_not_allowed:{node.get('node_type')}={node.get('value')}")
+        if index < len(path):
+            next_value = path[index].get("value")
+            allowed_children = set(node.get("allowed_children", []) or [])
+            if allowed_children and next_value not in allowed_children:
+                issues.append(
+                    f"hierarchy_child_not_allowed:{node.get('node_type')}={node.get('value')}->{next_value}"
+                )
+
+    values = dict(layer.get("path_values", {}) or {})
+    if values.get("primary_actor_type") == "pedestrian":
+        projection = dict(layer.get("nuplan_projection", {}) or {})
+        if projection.get("tracked_object_type") != "TrackedObjectType.PEDESTRIAN":
+            issues.append("pedestrian_requires_nuplan_pedestrian_projection")
+        if projection.get("sledge_collection") != "pedestrians":
+            issues.append("pedestrian_requires_sledge_pedestrians_collection")
+    if values.get("hazard_interaction") == "occluded_emergence":
+        if values.get("motion_direction") != "occluder_to_ego_path":
+            issues.append("occluded_emergence_direction_must_be_occluder_to_ego_path")
 
     return not issues, issues
 
