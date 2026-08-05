@@ -16,17 +16,27 @@ __all__ = [
     "NaturalLanguagePromptParser",
     "PromptAlignmentEvaluator",
     "SemanticSceneEditor",
+    "HierarchicalEventFramePipeline",
+    "DefaultLanguageUnderstandingPipeline",
 ]
 
-_LEGACY_EXPORTS = {
+_LAZY_EXPORTS = {
     "NaturalLanguagePromptParser": ("sledge.semantic_control.prompt_parser", "NaturalLanguagePromptParser"),
     "PromptAlignmentEvaluator": ("sledge.semantic_control.prompt_alignment", "PromptAlignmentEvaluator"),
     "SemanticSceneEditor": ("sledge.semantic_control.vector_editor", "SemanticSceneEditor"),
+    "HierarchicalEventFramePipeline": (
+        "sledge.semantic_control.language.hierarchical_pipeline",
+        "HierarchicalEventFramePipeline",
+    ),
+    "DefaultLanguageUnderstandingPipeline": (
+        "sledge.semantic_control.language.hierarchical_pipeline",
+        "DefaultLanguageUnderstandingPipeline",
+    ),
 }
 
 
 def __getattr__(name: str) -> Any:
-    if name not in _LEGACY_EXPORTS:
+    if name not in _LAZY_EXPORTS:
         raise AttributeError(name)
-    module_name, attribute_name = _LEGACY_EXPORTS[name]
+    module_name, attribute_name = _LAZY_EXPORTS[name]
     return getattr(import_module(module_name), attribute_name)
