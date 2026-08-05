@@ -1,15 +1,25 @@
 """Recursive hierarchy for natural-language traffic-scene understanding.
 
-The existing EventFrame mapper emits mostly flat semantic slots.  This module
-projects those slots onto one *selected path* through a constrained scene tree:
+The hierarchy deliberately separates two concerns:
 
-    road topology -> ego traffic space -> actor group -> actor type
+1. linguistic detail used to explain what the prompt said, and
+2. executable nuPlan/SLEDGE categories used by downstream scene generation.
+
+For example, ``child``, ``jogger`` and ``wheelchair user`` are retained as
+``language_actor_detail`` metadata, but every human-on-foot actor is projected
+to the executable category ``pedestrian`` because SLEDGE stores those actors in
+its ``pedestrians`` collection.
+
+The selected hierarchy is:
+
+    road topology -> ego traffic space -> actor group -> executable actor type
     -> hazard interaction -> auxiliary entity -> spatial relations
-    -> temporal trigger -> ego response -> risk -> executable parameters.
+    -> visibility -> relative motion -> temporal trigger -> provisional response
+    -> semantic risk -> executable parameters.
 
-Each child is validated against its parent.  Missing fine-grained values may be
-inferred from an already selected parent path, but the provenance remains
-explicit so downstream experiments can distinguish user evidence from a prior.
+Every selected node contains both the legal values at its own level and the
+legal values for the next level.  This avoids the ambiguous old use of
+``allowed_children`` for same-level sibling candidates.
 """
 
 from __future__ import annotations
@@ -21,6 +31,23 @@ from sledge.semantic_control.language.event_frame import EventFrame
 
 
 UNKNOWN_VALUES = {None, "", "unknown", "unknown_side", "unspecified"}
+
+NODE_ORDER: Tuple[str, ...] = (
+    "road_topology",
+    "ego_traffic_space",
+    "primary_actor_group",
+    "primary_actor_type",
+    "hazard_interaction",
+    "auxiliary_entity",
+    "source_region",
+    "target_region",
+    "anchor_region",
+    "visibility",
+    "motion_direction",
+    "trigger_event",
+    "ego_required_response",
+    "risk_level",
+)
 
 
 @dataclass(frozen=True)
@@ -35,10 +62,13 @@ class HierarchyNode:
     evidence: str = ""
     parent_type: str = ""
     parent_value: str = ""
+    allowed_values_at_level: Tuple[str, ...] = ()
+    next_node_type: str = ""
     allowed_children: Tuple[str, ...] = ()
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
+        data["allowed_values_at_level"] = list(self.allowed_values_at_level)
         data["allowed_children"] = list(self.allowed_children)
         return data
 
@@ -49,9 +79,10 @@ class HierarchicalScenePath:
 
     nodes: List[HierarchyNode] = field(default_factory=list)
     executable_parameter_groups: Dict[str, List[str]] = field(default_factory=dict)
+    attributes: Dict[str, Any] = field(default_factory=dict)
     valid: bool = True
     issues: List[str] = field(default_factory=list)
-    schema_version: str = "eventframe_v5_hierarchical_tree"
+    schema_version: str = "eventframe_v6_nuplan_hierarchical_tree"
 
     @property
     def values(self) -> Dict[str, str]:
@@ -72,9 +103,17 @@ class HierarchicalScenePath:
         return " -> ".join(parts)
 
     def to_nested_tree(self) -> Dict[str, Any]:
+        """Serialize the selected root-to-leaf path.
+
+        This is intentionally named a selected path tree; it is not presented as
+        the complete ontology.  Each node exposes its real next-level branch
+        options through ``allowed_children``.
+        """
+
         root: Dict[str, Any] = {
             "node_type": "scene_root",
             "value": "ego_centered_hazard_scene",
+            "tree_kind": "selected_root_to_leaf_path",
             "children": [],
         }
         cursor = root
@@ -86,12 +125,77 @@ class HierarchicalScenePath:
         cursor["executable_parameter_groups"] = self.executable_parameter_groups
         return root
 
+    def nuplan_projection(self) -> Dict[str, Any]:
+        actor_type = self.value("primary_actor_type")
+        auxiliary = self.value("auxiliary_entity", "none")
+
+        if actor_type == "pedestrian":
+            actor_category = "pedestrian"
+            tracked_object_type = "TrackedObjectType.PEDESTRIAN"
+            sledge_collection = "pedestrians"
+        elif actor_type in {
+            "lead_vehicle",
+            "adjacent_vehicle",
+            "merging_vehicle",
+            "oncoming_vehicle",
+            "cross_traffic_vehicle",
+            "circulating_vehicle",
+            "generic_vehicle",
+        }:
+            actor_category = "vehicle"
+            tracked_object_type = "TrackedObjectType.VEHICLE"
+            sledge_collection = "vehicles"
+        elif actor_type == "cyclist":
+            actor_category = "cyclist"
+            tracked_object_type = "unsupported_by_current_sledge_builder"
+            sledge_collection = "unsupported"
+        else:
+            actor_category = "static_object"
+            tracked_object_type = "static_object"
+            sledge_collection = "static_objects"
+
+        occluder_category = "none"
+        occluder_collection = "none"
+        if auxiliary in {
+            "parked_car_occluder",
+            "parked_truck_occluder",
+            "bus_occluder",
+            "van_occluder",
+            "generic_vehicle_occluder",
+        }:
+            occluder_category = "vehicle"
+            occluder_collection = "vehicles"
+        elif auxiliary.endswith("_occluder"):
+            occluder_category = "static_object"
+            occluder_collection = "static_objects"
+
+        compatible = sledge_collection != "unsupported"
+        return {
+            "actor_category": actor_category,
+            "tracked_object_type": tracked_object_type,
+            "sledge_collection": sledge_collection,
+            "language_actor_detail": self.attributes.get("language_actor_detail", "unspecified"),
+            "language_actor_text": self.attributes.get("language_actor_text", ""),
+            "occluder_category": occluder_category,
+            "occluder_sledge_collection": occluder_collection,
+            "coordinate_frame": "ego_local",
+            "compatible": compatible,
+            "warnings": [] if compatible else ["actor_category_requires_downstream_projection"],
+        }
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "schema_version": self.schema_version,
             "selected_path": [node.to_dict() for node in self.nodes],
             "path_values": self.values,
+            "selected_tree": self.to_nested_tree(),
             "tree": self.to_nested_tree(),
+            "tree_kind": "selected_root_to_leaf_path",
+            "branch_options": {
+                node.node_type: list(node.allowed_children) for node in self.nodes
+            },
+            "attributes": dict(self.attributes),
+            "nuplan_projection": self.nuplan_projection(),
             "executable_parameter_groups": self.executable_parameter_groups,
             "valid": self.valid,
             "issues": list(self.issues),
@@ -118,36 +222,35 @@ ROAD_TO_TRAFFIC_SPACES: Dict[str, Set[str]] = {
 }
 
 TRAFFIC_SPACE_TO_ACTOR_GROUPS: Dict[str, Set[str]] = {
-    "single_lane": {"vulnerable_road_user", "vehicle", "static_object"},
-    "same_direction_multi_lane": {"vehicle", "static_object"},
-    "bidirectional_road": {"vehicle", "vulnerable_road_user", "static_object"},
-    "curbside_zone": {"vulnerable_road_user", "vehicle", "static_object"},
-    "crosswalk_zone": {"vulnerable_road_user", "vehicle"},
-    "straight_through": {"vehicle", "vulnerable_road_user", "static_object"},
-    "left_turn_path": {"vehicle", "vulnerable_road_user"},
-    "right_turn_path": {"vehicle", "vulnerable_road_user"},
-    "cross_traffic_zone": {"vehicle", "vulnerable_road_user"},
-    "entry_path": {"vehicle", "vulnerable_road_user"},
-    "circulating_lane": {"vehicle"},
-    "exit_path": {"vehicle", "vulnerable_road_user"},
-    "ramp_merge": {"vehicle"},
-    "lane_drop": {"vehicle", "static_object"},
-    "diverge": {"vehicle"},
-    "open_lane": {"vehicle", "static_object"},
-    "partially_blocked_lane": {"static_object", "vehicle", "vulnerable_road_user"},
-    "closed_lane": {"static_object"},
+    key: {"vehicle", "static_object", "vulnerable_road_user"}
+    for key in {
+        "single_lane",
+        "bidirectional_road",
+        "curbside_zone",
+        "straight_through",
+        "left_turn_path",
+        "right_turn_path",
+        "cross_traffic_zone",
+        "entry_path",
+        "exit_path",
+        "partially_blocked_lane",
+    }
 }
+TRAFFIC_SPACE_TO_ACTOR_GROUPS.update(
+    {
+        "same_direction_multi_lane": {"vehicle", "static_object"},
+        "crosswalk_zone": {"vehicle", "vulnerable_road_user"},
+        "circulating_lane": {"vehicle"},
+        "ramp_merge": {"vehicle"},
+        "lane_drop": {"vehicle", "static_object"},
+        "diverge": {"vehicle"},
+        "open_lane": {"vehicle", "static_object"},
+        "closed_lane": {"static_object"},
+    }
+)
 
 ACTOR_GROUP_TO_TYPES: Dict[str, Set[str]] = {
-    "vulnerable_road_user": {
-        "pedestrian",
-        "child_pedestrian",
-        "jogger",
-        "wheelchair_user",
-        "cyclist",
-        "ebike_rider",
-        "scooter_rider",
-    },
+    "vulnerable_road_user": {"pedestrian", "cyclist"},
     "vehicle": {
         "lead_vehicle",
         "adjacent_vehicle",
@@ -167,13 +270,18 @@ ACTOR_GROUP_TO_TYPES: Dict[str, Set[str]] = {
 }
 
 ACTOR_TYPE_TO_INTERACTIONS: Dict[str, Set[str]] = {
-    "pedestrian": {"path_crossing", "enter_ego_lane", "occluded_emergence", "longitudinal_occupation"},
-    "child_pedestrian": {"path_crossing", "enter_ego_lane", "occluded_emergence"},
-    "jogger": {"path_crossing", "enter_ego_lane", "occluded_emergence"},
-    "wheelchair_user": {"path_crossing", "enter_ego_lane", "longitudinal_occupation"},
-    "cyclist": {"path_crossing", "enter_ego_lane", "occluded_emergence", "longitudinal_occupation"},
-    "ebike_rider": {"path_crossing", "enter_ego_lane", "occluded_emergence"},
-    "scooter_rider": {"path_crossing", "enter_ego_lane", "occluded_emergence"},
+    "pedestrian": {
+        "path_crossing",
+        "enter_ego_lane",
+        "occluded_emergence",
+        "longitudinal_occupation",
+    },
+    "cyclist": {
+        "path_crossing",
+        "enter_ego_lane",
+        "occluded_emergence",
+        "longitudinal_occupation",
+    },
     "lead_vehicle": {"gradual_braking", "hard_braking", "sudden_stop", "stationary_lead"},
     "adjacent_vehicle": {"lane_change", "cut_in", "aggressive_cut_in", "lane_encroachment"},
     "merging_vehicle": {"lane_change", "cut_in", "aggressive_cut_in", "roundabout_entry_conflict"},
@@ -203,7 +311,7 @@ INTERACTION_TO_AUXILIARIES: Dict[str, Set[str]] = {
         "barrier_occluder",
         "vegetation_occluder",
         "building_edge_occluder",
-        "generic_occluder",
+        "generic_vehicle_occluder",
     },
     "path_crossing": {"none", "crosswalk", "traffic_light"},
     "enter_ego_lane": {"none", "curb", "crosswalk"},
@@ -282,8 +390,33 @@ INTERACTION_TO_VISIBILITY: Dict[str, Set[str]] = {
     "occluded_emergence": {"partially_occluded", "fully_occluded"},
 }
 
+INTERACTION_TO_MOTION_DIRECTIONS: Dict[str, Set[str]] = {
+    "occluded_emergence": {"occluder_to_ego_path"},
+    "path_crossing": {"left_to_right", "right_to_left", "toward_ego_path"},
+    "enter_ego_lane": {"left_to_right", "right_to_left", "toward_ego_path"},
+    "longitudinal_occupation": {"longitudinal_same_direction"},
+    "gradual_braking": {"longitudinal_same_direction"},
+    "hard_braking": {"longitudinal_same_direction"},
+    "sudden_stop": {"longitudinal_same_direction"},
+    "stationary_lead": {"stationary"},
+    "lane_change": {"into_ego_lane"},
+    "cut_in": {"into_ego_lane"},
+    "aggressive_cut_in": {"into_ego_lane"},
+    "lane_encroachment": {"into_ego_lane"},
+    "left_turn_across_oncoming": {"opposite_direction"},
+    "oncoming_path_conflict": {"opposite_direction"},
+    "wrong_way_approach": {"opposite_direction"},
+    "intersection_crossing": {"toward_ego_path"},
+    "red_light_intrusion": {"toward_ego_path"},
+    "unprotected_crossing": {"toward_ego_path"},
+    "roundabout_entry_conflict": {"circulating_across_entry"},
+    "lane_blocking": {"stationary"},
+    "partial_lane_occupation": {"stationary"},
+    "sudden_obstacle_appearance": {"stationary"},
+}
+
 INTERACTION_TO_TRIGGERS: Dict[str, Set[str]] = {
-    "occluded_emergence": {"occluded_actor_becomes_visible", "actor_enters_ego_lane"},
+    "occluded_emergence": {"occluded_actor_becomes_visible"},
     "path_crossing": {"actor_starts_moving", "actor_enters_ego_lane"},
     "enter_ego_lane": {"actor_enters_ego_lane"},
     "longitudinal_occupation": {"ego_reaches_conflict_area"},
@@ -308,28 +441,28 @@ INTERACTION_TO_TRIGGERS: Dict[str, Set[str]] = {
 }
 
 INTERACTION_TO_RESPONSES: Dict[str, Set[str]] = {
-    "path_crossing": {"brake", "yield", "emergency_brake"},
-    "enter_ego_lane": {"brake", "yield", "emergency_brake"},
-    "occluded_emergence": {"brake", "emergency_brake", "steer"},
+    "path_crossing": {"brake", "yield", "brake_or_emergency_brake"},
+    "enter_ego_lane": {"brake", "yield", "brake_or_emergency_brake"},
+    "occluded_emergence": {"brake_or_emergency_brake", "steer"},
     "longitudinal_occupation": {"brake", "yield", "steer"},
     "gradual_braking": {"brake"},
-    "hard_braking": {"brake", "emergency_brake"},
-    "sudden_stop": {"emergency_brake", "steer"},
+    "hard_braking": {"brake_or_emergency_brake"},
+    "sudden_stop": {"brake_or_emergency_brake", "steer"},
     "stationary_lead": {"brake", "stop", "steer"},
     "lane_change": {"brake", "yield"},
     "cut_in": {"brake", "yield", "steer"},
-    "aggressive_cut_in": {"emergency_brake", "steer"},
+    "aggressive_cut_in": {"brake_or_emergency_brake", "steer"},
     "lane_encroachment": {"brake", "steer"},
     "left_turn_across_oncoming": {"yield", "stop", "brake"},
     "oncoming_path_conflict": {"brake", "steer", "stop"},
-    "wrong_way_approach": {"emergency_brake", "steer", "stop"},
+    "wrong_way_approach": {"brake_or_emergency_brake", "steer", "stop"},
     "intersection_crossing": {"brake", "yield", "stop"},
-    "red_light_intrusion": {"emergency_brake", "stop"},
+    "red_light_intrusion": {"brake_or_emergency_brake", "stop"},
     "unprotected_crossing": {"yield", "brake", "stop"},
     "roundabout_entry_conflict": {"yield", "stop", "brake"},
     "lane_blocking": {"brake", "stop", "steer"},
     "partial_lane_occupation": {"brake", "steer"},
-    "sudden_obstacle_appearance": {"emergency_brake", "steer"},
+    "sudden_obstacle_appearance": {"brake_or_emergency_brake", "steer"},
 }
 
 EXECUTABLE_PARAMETER_GROUPS: Dict[str, List[str]] = {
@@ -367,24 +500,29 @@ def _clean(value: Any, default: str = "unknown") -> str:
     if value is None:
         return default
     if isinstance(value, str):
-        if value in UNKNOWN_VALUES:
-            return default
-        return value.strip().lower().replace("-", "_").replace(" ", "_") or default
+        normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+        return default if normalized in UNKNOWN_VALUES else normalized or default
     if isinstance(value, (list, tuple, set)):
-        if len(value) == 1:
-            return _clean(next(iter(value)), default)
-        return default
+        return _clean(next(iter(value)), default) if len(value) == 1 else default
     return str(value).strip().lower().replace("-", "_").replace(" ", "_") or default
 
 
 def _first_allowed(candidate: str, allowed: Iterable[str], fallback: str) -> str:
     options = set(allowed)
-    return candidate if candidate in options else fallback if fallback in options else sorted(options)[0]
+    if candidate in options:
+        return candidate
+    if fallback in options:
+        return fallback
+    return sorted(options)[0] if options else candidate
 
 
-def _evidence(frame: EventFrame, *parts: str) -> str:
-    values = [part for part in parts if part]
-    return " | ".join(values) or frame.sentence
+def _span(sentence: str, terms: Sequence[str]) -> str:
+    lower = (sentence or "").lower()
+    for term in terms:
+        index = lower.find(term.lower())
+        if index >= 0:
+            return sentence[index : index + len(term)]
+    return ""
 
 
 class HierarchicalSceneResolver:
@@ -396,13 +534,27 @@ class HierarchicalSceneResolver:
 
         road, road_source, road_conf = self._road_topology(frame, slots, sentence)
         traffic_space, traffic_source, traffic_conf = self._traffic_space(frame, slots, sentence, road)
-        actor_group, actor_type, actor_source, actor_conf = self._actor(frame, slots, sentence, traffic_space)
-        interaction, interaction_source, interaction_conf = self._interaction(frame, slots, sentence, actor_type)
-        auxiliary, auxiliary_source, auxiliary_conf = self._auxiliary(frame, slots, sentence, interaction)
-        source_region, source_source, source_conf = self._source_region(frame, slots, sentence, interaction)
-        target_region, target_source, target_conf = self._target_region(frame, slots, sentence, interaction)
-        anchor_region, anchor_source, anchor_conf = self._anchor_region(frame, slots, sentence, interaction)
-        visibility, visibility_source, visibility_conf = self._visibility(frame, slots, sentence, interaction)
+        actor_group, actor_type, actor_detail, actor_source, actor_conf = self._actor(
+            frame, slots, sentence, traffic_space
+        )
+        interaction, interaction_source, interaction_conf = self._interaction(
+            frame, slots, sentence, actor_type
+        )
+        auxiliary, auxiliary_source, auxiliary_conf = self._auxiliary(
+            frame, slots, sentence, interaction
+        )
+        source_region, source_source, source_conf = self._source_region(
+            frame, slots, sentence, interaction
+        )
+        target_region, target_source, target_conf = self._target_region(
+            frame, slots, sentence, interaction
+        )
+        anchor_region, anchor_source, anchor_conf = self._anchor_region(
+            frame, slots, sentence, interaction
+        )
+        visibility, visibility_source, visibility_conf = self._visibility(
+            frame, slots, sentence, interaction
+        )
         motion_direction, direction_source, direction_conf = self._motion_direction(
             frame, slots, sentence, interaction, source_region
         )
@@ -410,47 +562,136 @@ class HierarchicalSceneResolver:
         response, response_source, response_conf = self._response(frame, slots, sentence, interaction)
         risk, risk_source, risk_conf = self._risk(frame, slots, sentence, interaction)
 
-        selected = [
-            ("road_topology", road, road_source, road_conf, frame.road_context.evidence_text),
-            ("ego_traffic_space", traffic_space, traffic_source, traffic_conf, frame.road_context.evidence_text),
-            ("primary_actor_group", actor_group, actor_source, actor_conf, frame.main_actor.evidence_text),
-            ("primary_actor_type", actor_type, actor_source, actor_conf, frame.main_actor.evidence_text),
-            ("hazard_interaction", interaction, interaction_source, interaction_conf, frame.main_event.evidence_text),
-            ("auxiliary_entity", auxiliary, auxiliary_source, auxiliary_conf, frame.occlusion.evidence_text),
-            ("source_region", source_region, source_source, source_conf, frame.main_event.evidence_text),
-            ("target_region", target_region, target_source, target_conf, frame.main_event.evidence_text),
-            ("anchor_region", anchor_region, anchor_source, anchor_conf, frame.main_event.evidence_text),
-            ("visibility", visibility, visibility_source, visibility_conf, frame.occlusion.evidence_text),
-            ("motion_direction", motion_direction, direction_source, direction_conf, frame.main_event.evidence_text),
-            ("trigger_event", trigger, trigger_source, trigger_conf, frame.main_event.evidence_text),
-            ("ego_required_response", response, response_source, response_conf, frame.ego_event.evidence_text),
-            ("risk_level", risk, risk_source, risk_conf, sentence),
-        ]
+        values = {
+            "road_topology": road,
+            "ego_traffic_space": traffic_space,
+            "primary_actor_group": actor_group,
+            "primary_actor_type": actor_type,
+            "hazard_interaction": interaction,
+            "auxiliary_entity": auxiliary,
+            "source_region": source_region,
+            "target_region": target_region,
+            "anchor_region": anchor_region,
+            "visibility": visibility,
+            "motion_direction": motion_direction,
+            "trigger_event": trigger,
+            "ego_required_response": response,
+            "risk_level": risk,
+        }
+        source_meta = {
+            "road_topology": (road_source, road_conf),
+            "ego_traffic_space": (traffic_source, traffic_conf),
+            "primary_actor_group": (actor_source, actor_conf),
+            "primary_actor_type": (actor_source, actor_conf),
+            "hazard_interaction": (interaction_source, interaction_conf),
+            "auxiliary_entity": (auxiliary_source, auxiliary_conf),
+            "source_region": (source_source, source_conf),
+            "target_region": (target_source, target_conf),
+            "anchor_region": (anchor_source, anchor_conf),
+            "visibility": (visibility_source, visibility_conf),
+            "motion_direction": (direction_source, direction_conf),
+            "trigger_event": (trigger_source, trigger_conf),
+            "ego_required_response": (response_source, response_conf),
+            "risk_level": (risk_source, risk_conf),
+        }
 
-        path = HierarchicalScenePath(executable_parameter_groups=EXECUTABLE_PARAMETER_GROUPS)
-        previous_type = "scene_root"
-        previous_value = "ego_centered_hazard_scene"
-        for level, (node_type, value, source, confidence, evidence_text) in enumerate(selected, start=1):
-            allowed = tuple(sorted(self.allowed_children(previous_type, previous_value, node_type, path.values)))
+        path = HierarchicalScenePath(
+            executable_parameter_groups=EXECUTABLE_PARAMETER_GROUPS,
+            attributes={
+                "language_actor_detail": actor_detail,
+                "language_actor_text": frame.main_actor.text,
+                "absolute_direction_hint": self._absolute_direction_hint(source_region),
+                "response_status": (
+                    "provisional_until_kinematic_check"
+                    if response == "brake_or_emergency_brake"
+                    else "resolved_from_semantics"
+                ),
+            },
+        )
+
+        for index, node_type in enumerate(NODE_ORDER):
+            level = index + 1
+            parent_type = "scene_root" if index == 0 else NODE_ORDER[index - 1]
+            parent_value = "ego_centered_hazard_scene" if index == 0 else values[parent_type]
+            next_node_type = NODE_ORDER[index + 1] if index + 1 < len(NODE_ORDER) else "executable_parameters"
+            allowed_at_level = tuple(
+                sorted(self.allowed_values(node_type, parent_type, parent_value, values))
+            )
+            allowed_children = tuple(
+                sorted(self.allowed_values(next_node_type, node_type, values[node_type], values))
+            )
+            source, confidence = source_meta[node_type]
             path.nodes.append(
                 HierarchyNode(
                     level=level,
                     node_type=node_type,
-                    value=value,
+                    value=values[node_type],
                     source=source,
                     confidence=max(0.0, min(float(confidence), 1.0)),
-                    evidence=_evidence(frame, evidence_text),
-                    parent_type=previous_type,
-                    parent_value=previous_value,
-                    allowed_children=allowed,
+                    evidence=self._node_evidence(frame, node_type, values[node_type]),
+                    parent_type=parent_type,
+                    parent_value=parent_value,
+                    allowed_values_at_level=allowed_at_level,
+                    next_node_type=next_node_type,
+                    allowed_children=allowed_children,
                 )
             )
-            previous_type = node_type
-            previous_value = value
 
         path.issues = self.validate(path)
         path.valid = not path.issues
         return path
+
+    def allowed_values(
+        self,
+        node_type: str,
+        parent_type: str,
+        parent_value: str,
+        selected: Mapping[str, str],
+    ) -> Set[str]:
+        if node_type == "road_topology":
+            return set(ROAD_TO_TRAFFIC_SPACES)
+        if node_type == "ego_traffic_space":
+            return set(ROAD_TO_TRAFFIC_SPACES.get(parent_value, set()))
+        if node_type == "primary_actor_group":
+            return set(TRAFFIC_SPACE_TO_ACTOR_GROUPS.get(parent_value, set()))
+        if node_type == "primary_actor_type":
+            return set(ACTOR_GROUP_TO_TYPES.get(parent_value, set()))
+        if node_type == "hazard_interaction":
+            return set(ACTOR_TYPE_TO_INTERACTIONS.get(parent_value, set()))
+        if node_type == "auxiliary_entity":
+            return set(INTERACTION_TO_AUXILIARIES.get(parent_value, {"none"}))
+
+        interaction = selected.get("hazard_interaction", "unknown")
+        if node_type == "source_region":
+            return set(INTERACTION_TO_SOURCE_REGIONS.get(interaction, {"front_same_lane"}))
+        if node_type == "target_region":
+            return set(INTERACTION_TO_TARGET_REGIONS.get(interaction, {"ego_path"}))
+        if node_type == "anchor_region":
+            return {
+                "near_front",
+                "far_front",
+                "intersection_center",
+                "lane_boundary",
+                "crosswalk",
+                "roundabout_entry",
+            }
+        if node_type == "visibility":
+            return set(
+                INTERACTION_TO_VISIBILITY.get(
+                    interaction, {"fully_visible", "partially_occluded", "fully_occluded"}
+                )
+            )
+        if node_type == "motion_direction":
+            return set(INTERACTION_TO_MOTION_DIRECTIONS.get(interaction, {"toward_ego_path"}))
+        if node_type == "trigger_event":
+            return set(INTERACTION_TO_TRIGGERS.get(interaction, {"ego_reaches_conflict_area"}))
+        if node_type == "ego_required_response":
+            return set(INTERACTION_TO_RESPONSES.get(interaction, {"brake"}))
+        if node_type == "risk_level":
+            return {"mild", "moderate", "aggressive", "critical"}
+        if node_type == "executable_parameters":
+            return set(EXECUTABLE_PARAMETER_GROUPS)
+        return set()
 
     def allowed_children(
         self,
@@ -459,95 +700,55 @@ class HierarchicalSceneResolver:
         child_type: str,
         selected: Mapping[str, str],
     ) -> Set[str]:
-        if child_type == "road_topology":
-            return set(ROAD_TO_TRAFFIC_SPACES)
-        if child_type == "ego_traffic_space":
-            return set(ROAD_TO_TRAFFIC_SPACES.get(parent_value, set()))
-        if child_type == "primary_actor_group":
-            return set(TRAFFIC_SPACE_TO_ACTOR_GROUPS.get(parent_value, ACTOR_GROUP_TO_TYPES))
-        if child_type == "primary_actor_type":
-            return set(ACTOR_GROUP_TO_TYPES.get(parent_value, set()))
-        if child_type == "hazard_interaction":
-            return set(ACTOR_TYPE_TO_INTERACTIONS.get(parent_value, set()))
-        if child_type == "auxiliary_entity":
-            return set(INTERACTION_TO_AUXILIARIES.get(parent_value, {"none"}))
-        interaction = selected.get("hazard_interaction", "unknown")
-        if child_type == "source_region":
-            return set(INTERACTION_TO_SOURCE_REGIONS.get(interaction, {"front_same_lane"}))
-        if child_type == "target_region":
-            return set(INTERACTION_TO_TARGET_REGIONS.get(interaction, {"ego_path"}))
-        if child_type == "anchor_region":
-            return {"near_front", "far_front", "intersection_center", "lane_boundary", "crosswalk", "roundabout_entry"}
-        if child_type == "visibility":
-            return set(INTERACTION_TO_VISIBILITY.get(interaction, {"fully_visible", "partially_occluded", "fully_occluded"}))
-        if child_type == "motion_direction":
-            return {
-                "left_to_right",
-                "right_to_left",
-                "into_ego_lane",
-                "toward_ego",
-                "opposite_direction",
-                "longitudinal_same_direction",
-                "stationary",
-                "circulating_across_entry",
-                "crossing_unspecified",
-            }
-        if child_type == "trigger_event":
-            return set(INTERACTION_TO_TRIGGERS.get(interaction, {"ego_reaches_conflict_area"}))
-        if child_type == "ego_required_response":
-            return set(INTERACTION_TO_RESPONSES.get(interaction, {"brake"}))
-        if child_type == "risk_level":
-            return {"mild", "moderate", "aggressive", "critical"}
-        return set()
+        return self.allowed_values(child_type, parent_type, parent_value, selected)
 
     def validate(self, path: HierarchicalScenePath) -> List[str]:
         issues: List[str] = []
         values = path.values
-        transitions = [
-            ("road_topology", "ego_traffic_space", ROAD_TO_TRAFFIC_SPACES),
-            ("ego_traffic_space", "primary_actor_group", TRAFFIC_SPACE_TO_ACTOR_GROUPS),
-            ("primary_actor_group", "primary_actor_type", ACTOR_GROUP_TO_TYPES),
-            ("primary_actor_type", "hazard_interaction", ACTOR_TYPE_TO_INTERACTIONS),
-            ("hazard_interaction", "auxiliary_entity", INTERACTION_TO_AUXILIARIES),
-        ]
-        for parent_key, child_key, table in transitions:
-            parent = values.get(parent_key, "unknown")
-            child = values.get(child_key, "unknown")
-            allowed = table.get(parent, set())
-            if child not in allowed:
-                issues.append(f"invalid_transition:{parent_key}={parent}->{child_key}={child}")
+
+        for index, node in enumerate(path.nodes):
+            expected_type = NODE_ORDER[index]
+            if node.node_type != expected_type:
+                issues.append(f"hierarchy_order_mismatch:{index + 1}:{node.node_type}!={expected_type}")
+            if node.value not in set(node.allowed_values_at_level):
+                issues.append(f"invalid_value_at_level:{node.node_type}={node.value}")
+            if index + 1 < len(path.nodes):
+                child = path.nodes[index + 1]
+                if child.value not in set(node.allowed_children):
+                    issues.append(
+                        f"invalid_transition:{node.node_type}={node.value}"
+                        f"->{child.node_type}={child.value}"
+                    )
 
         interaction = values.get("hazard_interaction", "unknown")
-        for child_key, table in [
-            ("source_region", INTERACTION_TO_SOURCE_REGIONS),
-            ("target_region", INTERACTION_TO_TARGET_REGIONS),
-            ("trigger_event", INTERACTION_TO_TRIGGERS),
-            ("ego_required_response", INTERACTION_TO_RESPONSES),
-        ]:
-            child = values.get(child_key, "unknown")
-            if child not in table.get(interaction, set()):
-                issues.append(f"invalid_interaction_child:{interaction}->{child_key}={child}")
-
         visibility = values.get("visibility", "unknown")
-        if interaction == "occluded_emergence" and visibility == "fully_visible":
-            issues.append("occluded_emergence_requires_occluded_visibility")
         auxiliary = values.get("auxiliary_entity", "none")
-        if interaction == "occluded_emergence" and not auxiliary.endswith("_occluder"):
-            issues.append("occluded_emergence_requires_occluder")
+        direction = values.get("motion_direction", "unknown")
+        actor_type = values.get("primary_actor_type", "unknown")
+
+        if actor_type not in ACTOR_GROUP_TO_TYPES.get(values.get("primary_actor_group", ""), set()):
+            issues.append("actor_type_not_nuplan_projection_category")
+        if interaction == "occluded_emergence":
+            if visibility == "fully_visible":
+                issues.append("occluded_emergence_requires_occluded_visibility")
+            if not auxiliary.endswith("_occluder"):
+                issues.append("occluded_emergence_requires_occluder")
+            if direction != "occluder_to_ego_path":
+                issues.append("occluded_emergence_requires_unique_occluder_to_ego_path_direction")
         return issues
 
     @staticmethod
     def _road_topology(frame: EventFrame, slots: Mapping[str, Any], sentence: str) -> Tuple[str, str, float]:
         raw = _clean(slots.get("road_topology", frame.road_context.road_type))
-        if raw in {"intersection"} or _contains(sentence, ["intersection", "junction"]):
+        if raw == "intersection" or _contains(sentence, ["intersection", "junction"]):
             return "intersection", "explicit" if raw == "intersection" else "inferred", 0.95
         if raw == "roundabout" or _contains(sentence, ["roundabout", "rotary", "traffic circle"]):
             return "roundabout", "explicit" if raw == "roundabout" else "inferred", 0.97
         if raw in {"construction_zone", "work_zone"} or _contains(sentence, ["construction", "work zone", "roadwork"]):
-            return "work_zone", "explicit" if raw in {"construction_zone", "work_zone"} else "inferred", 0.94
+            return "work_zone", "normalized" if raw != "unknown" else "inferred", 0.94
         if raw in {"merge_diverge", "ramp_merge"} or _contains(sentence, ["ramp", "merge area", "lane drop", "diverge"]):
             return "merge_diverge", "inferred", 0.82
-        return "straight_segment", "hierarchical_default" if raw == "unknown" else "normalized", 0.72 if raw == "unknown" else 0.9
+        return "straight_segment", "normalized" if raw != "unknown" else "hierarchical_default", 0.9 if raw != "unknown" else 0.72
 
     @staticmethod
     def _traffic_space(
@@ -566,15 +767,11 @@ class HierarchicalSceneResolver:
                 return "cross_traffic_zone", "inferred", 0.86
             return "straight_through", "hierarchical_default", 0.65
         if road == "roundabout":
-            if frame.ego_event.ego_maneuver == "enter_roundabout" or layout == "roundabout_entry":
-                return "entry_path", "inferred", 0.95
-            return "circulating_lane", "hierarchical_default", 0.62
+            return ("entry_path", "inferred", 0.95) if layout == "roundabout_entry" else ("circulating_lane", "hierarchical_default", 0.62)
         if road == "merge_diverge":
             return "ramp_merge", "inferred", 0.82
         if road == "work_zone":
-            if _contains(sentence, ["closed lane", "lane closed"]):
-                return "closed_lane", "explicit", 0.92
-            return "partially_blocked_lane", "inferred", 0.8
+            return ("closed_lane", "explicit", 0.92) if _contains(sentence, ["closed lane", "lane closed"]) else ("partially_blocked_lane", "inferred", 0.8)
         if _contains(sentence, ["crosswalk", "zebra crossing"]):
             return "crosswalk_zone", "explicit", 0.94
         if source in {"curbside", "from_curb"} or _contains(sentence, ["curb", "roadside", "sidewalk", "parked car", "parked truck"]):
@@ -591,26 +788,18 @@ class HierarchicalSceneResolver:
         slots: Mapping[str, Any],
         sentence: str,
         traffic_space: str,
-    ) -> Tuple[str, str, str, float]:
+    ) -> Tuple[str, str, str, str, float]:
         actor_base = _clean(slots.get("actor_type"))
         actor_text = " ".join([frame.main_actor.text, sentence]).lower()
         role = _clean(slots.get("actor_role"))
         motion = _clean(slots.get("motion_geometry"))
 
         if actor_base == "pedestrian" or frame.main_actor.actor_class == "human_on_foot":
-            if _contains(actor_text, ["child", "kid", "schoolkid", "boy", "girl"]):
-                return "vulnerable_road_user", "child_pedestrian", "explicit", 0.97
-            if _contains(actor_text, ["jogger", "runner", "running person"]):
-                return "vulnerable_road_user", "jogger", "explicit", 0.93
-            if _contains(actor_text, ["wheelchair"]):
-                return "vulnerable_road_user", "wheelchair_user", "explicit", 0.96
-            return "vulnerable_road_user", "pedestrian", "normalized", 0.95
+            detail = "child" if _contains(actor_text, ["child", "kid", "schoolkid", "boy", "girl"]) else "jogger" if _contains(actor_text, ["jogger", "runner", "running person"]) else "wheelchair_user" if _contains(actor_text, ["wheelchair"]) else "adult_or_unspecified"
+            return "vulnerable_road_user", "pedestrian", detail, "normalized_to_nuplan", 0.99
         if actor_base == "cyclist" or frame.main_actor.actor_class == "cyclist":
-            if _contains(actor_text, ["e-bike", "ebike", "electric bicycle"]):
-                return "vulnerable_road_user", "ebike_rider", "explicit", 0.94
-            if _contains(actor_text, ["scooter"]):
-                return "vulnerable_road_user", "scooter_rider", "explicit", 0.9
-            return "vulnerable_road_user", "cyclist", "normalized", 0.94
+            detail = "ebike" if _contains(actor_text, ["e-bike", "ebike", "electric bicycle"]) else "scooter" if _contains(actor_text, ["scooter"]) else "bicycle"
+            return "vulnerable_road_user", "cyclist", detail, "normalized", 0.94
         if actor_base in {"traffic_object", "static_obstacle"} or frame.main_actor.actor_class == "traffic_object":
             if _contains(actor_text, ["cone"]):
                 actor_type = "traffic_cone"
@@ -622,19 +811,18 @@ class HierarchicalSceneResolver:
                 actor_type = "parked_vehicle"
             else:
                 actor_type = "generic_obstacle"
-            return "static_object", actor_type, "inferred", 0.88
-
+            return "static_object", actor_type, "none", "inferred", 0.88
         if motion == "longitudinal" or role == "braking_actor":
-            return "vehicle", "lead_vehicle", "inferred", 0.95
+            return "vehicle", "lead_vehicle", "none", "inferred", 0.95
         if motion == "oncoming" or role == "approaching_actor":
-            return "vehicle", "oncoming_vehicle", "inferred", 0.94
+            return "vehicle", "oncoming_vehicle", "none", "inferred", 0.94
         if traffic_space == "cross_traffic_zone" or _contains(sentence, ["cross traffic", "from the side road"]):
-            return "vehicle", "cross_traffic_vehicle", "inferred", 0.87
+            return "vehicle", "cross_traffic_vehicle", "none", "inferred", 0.87
         if traffic_space in {"entry_path", "ramp_merge"} or _contains(sentence, ["merging vehicle", "merge into"]):
-            return "vehicle", "merging_vehicle", "inferred", 0.9
+            return "vehicle", "merging_vehicle", "none", "inferred", 0.9
         if motion == "merging" or role == "merging_actor":
-            return "vehicle", "adjacent_vehicle", "inferred", 0.91
-        return "vehicle", "generic_vehicle", "hierarchical_default", 0.58
+            return "vehicle", "adjacent_vehicle", "none", "inferred", 0.91
+        return "vehicle", "generic_vehicle", "none", "hierarchical_default", 0.58
 
     @staticmethod
     def _interaction(
@@ -647,13 +835,14 @@ class HierarchicalSceneResolver:
         event = _clean(slots.get("fine_grained_conflict_type", frame.main_event.event_type))
         risk = _clean(slots.get("risk_level"), "moderate")
         occluded = bool(slots.get("occlusion_enabled", frame.occlusion.enabled))
-
         allowed = ACTOR_TYPE_TO_INTERACTIONS.get(actor_type, set())
+
         if event == "roundabout_entry_conflict" and "roundabout_entry_conflict" in allowed:
             return "roundabout_entry_conflict", "inferred", 0.97
         if occluded and "occluded_emergence" in allowed:
-            return "occluded_emergence", "explicit", 0.98
-        if actor_type in {"pedestrian", "child_pedestrian", "jogger", "wheelchair_user", "cyclist", "ebike_rider", "scooter_rider"}:
+            explicit = frame.occlusion.enabled or _contains(sentence, ["behind", "occluded", "emerges", "appears from"])
+            return "occluded_emergence", "explicit" if explicit else "inferred", 0.98
+        if actor_type in {"pedestrian", "cyclist"}:
             candidate = "enter_ego_lane" if event == "enter_ego_lane" else "path_crossing"
             return _first_allowed(candidate, allowed, "path_crossing"), "inferred", 0.93
         if actor_type == "lead_vehicle":
@@ -661,20 +850,18 @@ class HierarchicalSceneResolver:
                 return "hard_braking", "explicit" if _contains(sentence, ["hard", "panic", "slams", "suddenly"]) else "inferred", 0.95
             return "gradual_braking", "hierarchical_default", 0.73
         if actor_type in {"adjacent_vehicle", "merging_vehicle", "generic_vehicle"} and motion == "merging":
-            if risk in {"aggressive", "critical"} or _contains(sentence, ["aggressive", "tight gap", "no room", "squeezes"]):
-                return _first_allowed("aggressive_cut_in", allowed, "cut_in"), "inferred", 0.9
-            return _first_allowed("cut_in", allowed, "lane_change"), "inferred", 0.87
+            candidate = "aggressive_cut_in" if risk in {"aggressive", "critical"} or _contains(sentence, ["aggressive", "tight gap", "no room", "squeezes"]) else "cut_in"
+            return _first_allowed(candidate, allowed, "lane_change"), "inferred", 0.9
         if actor_type in {"oncoming_vehicle", "generic_vehicle"} and motion == "oncoming":
-            if frame.ego_event.ego_maneuver == "left_turn" or _contains(sentence, ["left turn", "turns left"]):
-                return _first_allowed("left_turn_across_oncoming", allowed, "oncoming_path_conflict"), "inferred", 0.96
-            return _first_allowed("oncoming_path_conflict", allowed, "path_crossing"), "inferred", 0.88
+            candidate = "left_turn_across_oncoming" if frame.ego_event.ego_maneuver == "left_turn" or _contains(sentence, ["left turn", "turns left"]) else "oncoming_path_conflict"
+            return _first_allowed(candidate, allowed, "oncoming_path_conflict"), "inferred", 0.94
         if actor_type == "cross_traffic_vehicle" or (motion == "lateral" and actor_type.endswith("vehicle")):
             return _first_allowed("intersection_crossing", allowed, "path_crossing"), "inferred", 0.84
-        if actor_type == "circulating_vehicle" or event == "roundabout_entry_conflict":
+        if actor_type == "circulating_vehicle":
             return "roundabout_entry_conflict", "inferred", 0.96
         if actor_type in ACTOR_GROUP_TO_TYPES["static_object"] or motion == "static":
             return _first_allowed("lane_blocking", allowed, "partial_lane_occupation"), "inferred", 0.9
-        return sorted(allowed)[0] if allowed else "path_crossing", "hierarchical_default", 0.4
+        return (sorted(allowed)[0], "hierarchical_default", 0.4) if allowed else ("path_crossing", "hierarchical_default", 0.4)
 
     @staticmethod
     def _auxiliary(
@@ -686,12 +873,11 @@ class HierarchicalSceneResolver:
         allowed = INTERACTION_TO_AUXILIARIES.get(interaction, {"none"})
         if interaction == "occluded_emergence":
             raw = _clean(slots.get("occluder_type", frame.occlusion.occluder_type))
-            parked = _contains(sentence, ["parked", "stopped roadside"])
             if raw == "truck" or _contains(sentence, ["truck", "lorry"]):
-                candidate = "parked_truck_occluder" if parked else "parked_truck_occluder"
-            elif raw == "bus" or "bus" in sentence.lower():
+                candidate = "parked_truck_occluder"
+            elif raw == "bus" or _contains(sentence, ["bus"]):
                 candidate = "bus_occluder"
-            elif raw == "van" or "van" in sentence.lower():
+            elif raw == "van" or _contains(sentence, ["van"]):
                 candidate = "van_occluder"
             elif raw == "parked_vehicle" or _contains(sentence, ["parked car", "parked vehicle"]):
                 candidate = "parked_car_occluder"
@@ -702,8 +888,9 @@ class HierarchicalSceneResolver:
             elif _contains(sentence, ["building", "corner"]):
                 candidate = "building_edge_occluder"
             else:
-                candidate = "generic_occluder"
-            return _first_allowed(candidate, allowed, "generic_occluder"), "inferred", 0.95 if candidate != "generic_occluder" else 0.62
+                candidate = "generic_vehicle_occluder"
+            explicit = raw != "unknown" or bool(_span(sentence, ["parked truck", "truck", "parked car", "bus", "van", "barrier", "tree", "building"]))
+            return _first_allowed(candidate, allowed, "generic_vehicle_occluder"), "normalized_explicit" if explicit else "hierarchical_default", 0.98 if explicit else 0.62
         if _contains(sentence, ["crosswalk", "zebra crossing"]) and "crosswalk" in allowed:
             return "crosswalk", "explicit", 0.96
         if _contains(sentence, ["traffic light", "signal"]) and "traffic_light" in allowed:
@@ -742,12 +929,11 @@ class HierarchicalSceneResolver:
                 candidate = "left_side"
             elif _contains(sentence, ["from the right", "right side", "right curb"]):
                 candidate = "right_side"
-            elif _contains(sentence, ["curb", "roadside", "sidewalk"]):
+            elif _contains(sentence, ["curb", "roadside", "sidewalk", "parked truck", "parked car"]):
                 candidate = "curbside"
         if candidate in allowed:
-            return candidate, "explicit" if relation != "unknown" else "inferred", 0.9
-        fallback = sorted(allowed)[0]
-        return fallback, "hierarchical_default", 0.55
+            return candidate, "explicit" if relation != "unknown" or candidate in {"left_side", "right_side"} else "inferred", 0.9
+        return sorted(allowed)[0], "hierarchical_default", 0.55
 
     @staticmethod
     def _target_region(
@@ -780,12 +966,7 @@ class HierarchicalSceneResolver:
         interaction: str,
     ) -> Tuple[str, str, float]:
         raw = _clean(slots.get("anchor_region", frame.main_event.event_location_relation))
-        if raw in {"intersection", "at_intersection"} or interaction in {
-            "left_turn_across_oncoming",
-            "intersection_crossing",
-            "red_light_intrusion",
-            "unprotected_crossing",
-        }:
+        if raw in {"intersection", "at_intersection"} or interaction in {"left_turn_across_oncoming", "intersection_crossing", "red_light_intrusion", "unprotected_crossing"}:
             return "intersection_center", "inferred", 0.9
         if raw == "roundabout_entry" or interaction == "roundabout_entry_conflict":
             return "roundabout_entry", "inferred", 0.95
@@ -793,9 +974,13 @@ class HierarchicalSceneResolver:
             return "crosswalk", "explicit", 0.94
         if interaction in {"lane_change", "cut_in", "aggressive_cut_in", "lane_encroachment"}:
             return "lane_boundary", "inferred", 0.9
-        if raw in {"front", "ahead_of", "in_front_of"} or _contains(sentence, ["just ahead", "near ego", "close ahead"]):
-            return "near_front", "explicit" if raw != "unknown" else "inferred", 0.86
-        return "far_front" if _contains(sentence, ["far ahead", "in the distance"]) else "near_front", "hierarchical_default", 0.6
+        if _contains(sentence, ["just ahead", "near ego", "close ahead", "directly ahead"]):
+            return "near_front", "explicit", 0.9
+        if _contains(sentence, ["far ahead", "in the distance"]):
+            return "far_front", "explicit", 0.9
+        if raw in {"front", "ahead_of", "in_front_of"}:
+            return "near_front", "inferred", 0.72
+        return "near_front", "hierarchical_default", 0.58
 
     @staticmethod
     def _visibility(
@@ -808,7 +993,8 @@ class HierarchicalSceneResolver:
         if interaction == "occluded_emergence" or occluded:
             if _contains(sentence, ["partial", "partially"]):
                 return "partially_occluded", "explicit", 0.96
-            return "fully_occluded", "inferred", 0.9
+            explicit = frame.occlusion.enabled or _contains(sentence, ["behind", "hidden", "occluded"])
+            return "fully_occluded", "explicit" if explicit else "inferred", 0.96 if explicit else 0.9
         return "fully_visible", "hierarchical_default", 0.8
 
     @staticmethod
@@ -819,24 +1005,16 @@ class HierarchicalSceneResolver:
         interaction: str,
         source_region: str,
     ) -> Tuple[str, str, float]:
+        if interaction == "occluded_emergence":
+            return "occluder_to_ego_path", "geometric_constraint", 1.0
         raw = _clean(slots.get("conflict_direction", frame.main_event.motion_direction))
         if raw in {"left_to_right", "right_to_left"}:
             return raw, "explicit", 0.95
-        if source_region in {"left_side", "adjacent_left_lane"}:
-            return "left_to_right" if interaction in {"path_crossing", "enter_ego_lane", "occluded_emergence"} else "into_ego_lane", "inferred", 0.86
-        if source_region in {"right_side", "adjacent_right_lane"}:
-            return "right_to_left" if interaction in {"path_crossing", "enter_ego_lane", "occluded_emergence"} else "into_ego_lane", "inferred", 0.86
-        if interaction in {"lane_change", "cut_in", "aggressive_cut_in", "lane_encroachment"}:
-            return "into_ego_lane", "inferred", 0.93
-        if interaction in {"gradual_braking", "hard_braking", "sudden_stop", "stationary_lead"}:
-            return "stationary" if interaction == "stationary_lead" else "longitudinal_same_direction", "inferred", 0.93
-        if interaction in {"left_turn_across_oncoming", "oncoming_path_conflict", "wrong_way_approach"}:
-            return "opposite_direction", "inferred", 0.95
-        if interaction == "roundabout_entry_conflict":
-            return "circulating_across_entry", "inferred", 0.95
-        if interaction in {"lane_blocking", "partial_lane_occupation", "sudden_obstacle_appearance"}:
-            return "stationary", "inferred", 0.96
-        return "crossing_unspecified", "distributional_default", 0.5
+        if source_region == "left_side":
+            return "left_to_right", "inferred", 0.86
+        if source_region == "right_side":
+            return "right_to_left", "inferred", 0.86
+        return sorted(INTERACTION_TO_MOTION_DIRECTIONS.get(interaction, {"toward_ego_path"}))[0], "inferred", 0.88
 
     @staticmethod
     def _trigger(
@@ -864,26 +1042,17 @@ class HierarchicalSceneResolver:
         interaction: str,
     ) -> Tuple[str, str, float]:
         allowed = INTERACTION_TO_RESPONSES[interaction]
-        risk = _clean(slots.get("risk_level"), "moderate")
         if _contains(sentence, ["emergency brake", "hard brake", "panic brake"]):
-            candidate = "emergency_brake"
-            source = "explicit"
-        elif _contains(sentence, ["yield"]):
-            candidate = "yield"
-            source = "explicit"
-        elif _contains(sentence, ["steer", "swerve", "evade"]):
-            candidate = "steer"
-            source = "explicit"
-        elif risk in {"aggressive", "critical"} and "emergency_brake" in allowed:
-            candidate = "emergency_brake"
-            source = "inferred"
-        elif "yield" in allowed and interaction in {"left_turn_across_oncoming", "roundabout_entry_conflict", "unprotected_crossing"}:
-            candidate = "yield"
-            source = "inferred"
-        else:
-            candidate = "brake" if "brake" in allowed else sorted(allowed)[0]
-            source = "hierarchical_default"
-        return candidate, source, 0.92 if source == "explicit" else 0.78
+            return _first_allowed("brake_or_emergency_brake", allowed, "brake"), "explicit", 0.95
+        if _contains(sentence, ["yield"]):
+            return _first_allowed("yield", allowed, "brake"), "explicit", 0.94
+        if _contains(sentence, ["steer", "swerve", "evade"]):
+            return _first_allowed("steer", allowed, "brake"), "explicit", 0.94
+        if "brake_or_emergency_brake" in allowed:
+            return "brake_or_emergency_brake", "kinematic_pending", 0.68
+        if "yield" in allowed and interaction in {"left_turn_across_oncoming", "roundabout_entry_conflict", "unprotected_crossing"}:
+            return "yield", "inferred", 0.8
+        return ("brake", "hierarchical_default", 0.7) if "brake" in allowed else (sorted(allowed)[0], "hierarchical_default", 0.65)
 
     @staticmethod
     def _risk(
@@ -895,9 +1064,41 @@ class HierarchicalSceneResolver:
         raw = _clean(slots.get("risk_level"), "moderate")
         if _contains(sentence, ["critical", "imminent collision", "unavoidable"]):
             return "critical", "explicit", 0.95
+        if _contains(sentence, ["aggressive", "dangerous", "suddenly", "abruptly", "near miss", "near-miss"]):
+            return "aggressive", "explicit_semantic_modifier", 0.9
+        if _contains(sentence, ["mild", "slowly", "comfortable"]):
+            return "mild", "explicit_semantic_modifier", 0.9
         if raw in {"mild", "moderate", "aggressive", "critical"}:
-            source = "explicit" if _contains(sentence, [raw, "dangerous", "aggressive", "mild"]) else "inferred"
-            return raw, source, 0.9 if source == "explicit" else 0.76
+            return raw, "inferred", 0.74
         if interaction in {"occluded_emergence", "aggressive_cut_in", "hard_braking", "sudden_stop", "red_light_intrusion", "wrong_way_approach"}:
-            return "aggressive", "hierarchical_prior", 0.75
+            return "aggressive", "hierarchical_prior", 0.72
         return "moderate", "hierarchical_default", 0.65
+
+    @staticmethod
+    def _absolute_direction_hint(source_region: str) -> str:
+        if source_region == "left_side":
+            return "left_to_right"
+        if source_region == "right_side":
+            return "right_to_left"
+        return "derived_after_occluder_side_sampling"
+
+    @staticmethod
+    def _node_evidence(frame: EventFrame, node_type: str, value: str) -> str:
+        sentence = frame.sentence
+        if node_type in {"primary_actor_group", "primary_actor_type"}:
+            return frame.main_actor.text or _span(sentence, ["child", "pedestrian", "person", "cyclist"])
+        if node_type == "hazard_interaction" and value == "occluded_emergence":
+            return _span(sentence, ["emerges from behind", "appears from behind", "comes out from behind", "behind"])
+        if node_type == "auxiliary_entity":
+            return _span(sentence, ["parked truck", "truck", "parked car", "bus", "van", "barrier", "tree", "building"])
+        if node_type == "target_region":
+            return _span(sentence, ["ego lane", "ego path", "same lane"])
+        if node_type == "visibility":
+            return _span(sentence, ["from behind", "behind", "occluded", "hidden"])
+        if node_type == "risk_level":
+            return _span(sentence, ["suddenly", "abruptly", "dangerous", "aggressive", "critical", "mild"])
+        if node_type == "motion_direction" and value == "occluder_to_ego_path":
+            return "derived: selected occluder -> ego path"
+        if node_type == "ego_required_response" and value == "brake_or_emergency_brake":
+            return "derived: response pending sampled TTC and stopping distance"
+        return ""
