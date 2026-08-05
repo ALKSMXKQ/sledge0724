@@ -73,6 +73,12 @@ The parameter layer now:
 - records hard visibility, placement, path-intersection, and direction constraints;
 - reports `scene_template_ready` separately from `sampled_scene_ready`.
 
+A complete parameter template is not yet one concrete scene. Downstream code
+must sample one value for each numeric/categorical range, resolve derived
+references, and evaluate every hard constraint. Only then should
+`sampled_scene_ready` become true and the concrete states be written into
+`SledgeVectorRaw`.
+
 Single prompt example:
 
 ```bash
