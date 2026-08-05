@@ -78,6 +78,25 @@ class HierarchicalParameterFiller:
             entry.setdefault("is_assumption", entry["source"] != "user_input")
             entry.setdefault("alternatives", [])
 
+        # The legacy filler adds semantic priors before parser-provided values.
+        # Re-apply explicitly stated EventFrame parameters here so a hierarchy
+        # prior can never replace a value that came from the user's sentence.
+        for name, parameter in frame.completed_parameters.items():
+            source = str(parameter.source or "unknown")
+            if source not in {"user_input", "explicit", "llm_explicit"}:
+                continue
+            completed[name] = {
+                "value": parameter.value,
+                "unit": parameter.unit,
+                "source": "user_input",
+                "reason": parameter.reason or "explicit parameter from EventFrame",
+                "confidence": 1.0,
+                "evidence": [frame.sentence],
+                "conditioned_on": {},
+                "is_assumption": False,
+                "alternatives": [],
+            }
+
         def put(
             name: str,
             value: Any,
