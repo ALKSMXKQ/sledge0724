@@ -9,6 +9,11 @@ The hierarchy always contains a value for every node, therefore routing must use
 both ``value`` and ``source``. A hierarchical default such as
 ``road_topology=straight_segment`` is not evidence that the prompt requested a
 new road.
+
+The current EventFrame schema does not expose every global road property (for
+example ``lane_count``). A deliberately narrow prompt-provenance bridge extracts
+only global road structure expressions and records them as ``prompt_explicit``.
+It never parses actor/occluder/ego-lane hazard semantics.
 """
 
 from __future__ import annotations
@@ -16,6 +21,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from enum import Enum
+import re
 from typing import Any, Dict, FrozenSet, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 
@@ -26,10 +32,6 @@ class SceneConstructionMode(str, Enum):
     SYNTHESIZE_NEW = "synthesize_new"
 
 
-# Provenance values that mean the user really supplied the value. ``normalized``
-# is deliberately excluded: in the current hierarchy it can also be produced
-# from parser normalization/defaulting and therefore is not a safe synthesis
-# trigger by itself.
 EXPLICIT_SOURCES = frozenset(
     {
         "explicit",
@@ -40,9 +42,6 @@ EXPLICIT_SOURCES = frozenset(
     }
 )
 
-# ``road_topology`` is inherently global. ``ego_traffic_space`` is mixed: some
-# values describe global lane organization while others merely locate the local
-# hazard. Only the structural subset may trigger synthesis.
 GLOBAL_HIERARCHY_NODE_VALUES: Mapping[str, Optional[FrozenSet[str]]] = {
     "road_topology": None,
     "ego_traffic_space": frozenset(
@@ -59,10 +58,6 @@ GLOBAL_HIERARCHY_NODE_VALUES: Mapping[str, Optional[FrozenSet[str]]] = {
     ),
 }
 
-# Global road geometry/layout parameters live in ``parameter_layer.completed``
-# rather than the hierarchy. They only trigger synthesis when their provenance
-# is explicit. The same parameters remain in the template in edit mode but are
-# marked inactive so that B0 geometry wins.
 GLOBAL_ROAD_PARAMETER_NAMES = frozenset(
     {
         "lane_count",
@@ -83,9 +78,6 @@ GLOBAL_ROAD_PARAMETER_NAMES = frozenset(
     }
 )
 
-# These hierarchy nodes describe the hazardous interaction itself and are always
-# local with respect to construction routing. In particular target_region may
-# be ``ego_lane`` / ``ego_path`` without requesting a new road.
 LOCAL_HAZARD_NODE_NAMES = (
     "primary_actor_group",
     "primary_actor_type",
@@ -138,6 +130,14 @@ DEFAULTISH_SOURCES = frozenset(
 )
 
 UNKNOWN_TEXT_VALUES = frozenset({"", "unknown", "unknown_side", "unspecified"})
+LANE_COUNT_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+}
 
 
 @dataclass(frozen=True)
@@ -178,7 +178,12 @@ class SceneConstructionDecision:
 class SceneConstructionRouter:
     """Make a deterministic, provenance-aware scene construction decision."""
 
-    def route(self, spec: Mapping[str, Any]) -> SceneConstructionDecision:
+    def route(
+        self,
+        spec: Mapping[str, Any],
+        *,
+        prompt: Optional[str] = None,
+    ) -> SceneConstructionDecision:
         nodes = self._hierarchy_nodes(spec)
         parameters = self._completed_parameters(spec)
 
@@ -222,6 +227,10 @@ class SceneConstructionRouter:
                 )
             )
 
+        if prompt:
+            global_evidence.extend(self._prompt_global_road_evidence(prompt))
+        global_evidence = self._deduplicate_evidence(global_evidence)
+
         local_constraints = self._local_hazard_constraints(nodes, parameters)
         if global_evidence:
             return SceneConstructionDecision(
@@ -242,11 +251,16 @@ class SceneConstructionRouter:
             inherits_b0_road=True,
         )
 
-    def attach(self, spec: Mapping[str, Any]) -> Dict[str, Any]:
+    def attach(
+        self,
+        spec: Mapping[str, Any],
+        *,
+        prompt: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Return a copied spec with routing and parameter execution policy."""
 
         out: Dict[str, Any] = deepcopy(dict(spec))
-        decision = self.route(out)
+        decision = self.route(out, prompt=prompt)
         out["scene_construction"] = decision.to_dict()
         self._attach_parameter_execution_policy(out, decision.mode)
         return out
@@ -297,9 +311,6 @@ class SceneConstructionRouter:
             source = str(node.get("source", "unknown"))
             if self._is_unknown(value):
                 continue
-            # Keep semantically meaningful inferred values, but omit pure
-            # hierarchy defaults so the list remains an explanation of the
-            # actual local hazard rather than a dump of the full tree.
             if source in DEFAULTISH_SOURCES:
                 continue
             constraints.append(f"{name}={value}")
@@ -317,6 +328,89 @@ class SceneConstructionRouter:
                 constraints.append(label)
 
         return constraints
+
+    @staticmethod
+    def _prompt_global_road_evidence(prompt: str) -> List[RoutingEvidence]:
+        """Extract only explicit global road structure missing from EventFrame.
+
+        This is intentionally conservative. Generic mentions of ``lane``,
+        ``ego lane``, ``ego path``, crossing, left/right roadside, and vehicle
+        merging do not match these patterns.
+        """
+
+        text = " ".join(str(prompt).lower().replace("_", " ").split())
+        evidence: List[RoutingEvidence] = []
+
+        def add(name: str, value: Any) -> None:
+            evidence.append(
+                RoutingEvidence(
+                    name=name,
+                    value=value,
+                    source="prompt_explicit",
+                    kind="prompt_global_constraint",
+                )
+            )
+
+        lane_count_match = re.search(
+            r"\b(one|two|three|four|five|six|[1-6])\s*[- ]\s*lane\b",
+            text,
+        )
+        if lane_count_match:
+            token = lane_count_match.group(1)
+            add("lane_count", LANE_COUNT_WORDS.get(token, int(token) if token.isdigit() else token))
+
+        if re.search(r"\b(?:bidirectional|bi-directional|two-way)\s+(?:road|street|traffic)\b", text):
+            add("road_directionality", "bidirectional")
+        elif re.search(r"\bone-way\s+(?:road|street|traffic)\b", text):
+            add("road_directionality", "one_way")
+
+        if re.search(r"\b(?:four-way|three-way|t-junction|t junction|cross)\s+intersection\b|\bintersection\b|\bjunction\b", text):
+            add("road_topology", "intersection")
+        if re.search(r"\b(?:roundabout|traffic circle|rotary)\b", text):
+            add("road_topology", "roundabout")
+        if re.search(r"\b(?:highway\s+merge|merge\s+ramp|merging\s+ramp|merge\s+area|diverge|lane\s+drop)\b", text):
+            add("road_topology", "merge_diverge")
+        if re.search(r"\b(?:work\s*zone|roadwork|road\s+works|construction\s+zone)\b", text):
+            add("road_topology", "work_zone")
+        if re.search(r"\b(?:closed\s+lane|lane\s+closed|partially\s+blocked\s+lane)\b", text):
+            add("lane_configuration", "closed_or_blocked_lane")
+        if re.search(r"\bdedicated\s+(?:left|right)[- ]turn\s+lane\b", text):
+            add("lane_configuration", "dedicated_turn_lane")
+        if re.search(r"\b(?:multi-lane|multilane)\s+(?:road|street)\b", text):
+            add("lane_configuration", "multi_lane")
+
+        width_match = re.search(
+            r"\blane\s+width\s*(?:is|of|=|:)??\s*(\d+(?:\.\d+)?)\s*m(?:eter|eters)?\b",
+            text,
+        )
+        if width_match:
+            add("lane_width_m", float(width_match.group(1)))
+        else:
+            wide_lane_match = re.search(
+                r"\b(\d+(?:\.\d+)?)\s*m(?:eter|eters)?[- ]wide\s+lane\b",
+                text,
+            )
+            if wide_lane_match:
+                add("lane_width_m", float(wide_lane_match.group(1)))
+
+        if re.search(r"\bcurved\s+road\b|\broad\s+curves\b|\broad\s+curvature\b", text):
+            add("road_geometry", "curved")
+        elif re.search(r"\bstraight\s+road\b|\bstraight\s+roadway\b", text):
+            add("road_geometry", "straight")
+
+        return evidence
+
+    @staticmethod
+    def _deduplicate_evidence(items: Iterable[RoutingEvidence]) -> List[RoutingEvidence]:
+        result: List[RoutingEvidence] = []
+        seen = set()
+        for item in items:
+            key = (item.name, repr(item.value))
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(item)
+        return result
 
     @staticmethod
     def _attach_parameter_execution_policy(
@@ -348,7 +442,11 @@ class SceneConstructionRouter:
         }
 
 
-def attach_scene_construction(spec: Mapping[str, Any]) -> Dict[str, Any]:
+def attach_scene_construction(
+    spec: Mapping[str, Any],
+    *,
+    prompt: Optional[str] = None,
+) -> Dict[str, Any]:
     """Convenience function for callers that do not need a router instance."""
 
-    return SceneConstructionRouter().attach(spec)
+    return SceneConstructionRouter().attach(spec, prompt=prompt)
