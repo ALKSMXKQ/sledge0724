@@ -59,6 +59,16 @@ from sledge.semantic_control.language.hierarchical_pipeline import (
     attach_hierarchy,
     validate_hierarchical_spec,
 )
+from sledge.semantic_control.language.scene_construction_router import (
+    SceneConstructionDecision,
+    SceneConstructionMode,
+    SceneConstructionRouter,
+    attach_scene_construction,
+)
+from sledge.semantic_control.language.routed_hierarchical_pipeline import (
+    DefaultRoutedLanguageUnderstandingPipeline,
+    RoutedHierarchicalEventFramePipeline,
+)
 
 
 __all__ = [
@@ -99,4 +109,10 @@ __all__ = [
     "DefaultLanguageUnderstandingPipeline",
     "attach_hierarchy",
     "validate_hierarchical_spec",
+    "SceneConstructionMode",
+    "SceneConstructionDecision",
+    "SceneConstructionRouter",
+    "attach_scene_construction",
+    "RoutedHierarchicalEventFramePipeline",
+    "DefaultRoutedLanguageUnderstandingPipeline",
 ]
