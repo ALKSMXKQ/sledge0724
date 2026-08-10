@@ -38,7 +38,10 @@ def test_ego_lane_is_local_and_does_not_trigger_synthesis():
         },
     )
 
-    routed = SceneConstructionRouter().attach(spec)
+    routed = SceneConstructionRouter().attach(
+        spec,
+        prompt="A child emerges from behind a parked truck into the ego lane.",
+    )
 
     assert routed["scene_construction"]["mode"] == SceneConstructionMode.EDIT_EXISTING.value
     assert routed["scene_construction"]["explicit_global_constraints"] == []
@@ -140,3 +143,76 @@ def test_explicit_curbs_and_ego_path_remain_edit_existing():
     assert decision.mode == SceneConstructionMode.EDIT_EXISTING
     assert "source_region=right_side" in decision.local_hazard_constraints
     assert "target_region=ego_path" in decision.local_hazard_constraints
+
+
+def test_two_lane_bidirectional_prompt_bridges_missing_eventframe_fields():
+    spec = _spec(
+        [
+            _node("road_topology", "straight_segment", "hierarchical_default"),
+            _node("ego_traffic_space", "single_lane", "hierarchical_default"),
+            _node("hazard_interaction", "occluded_emergence", "explicit"),
+            _node("target_region", "ego_lane", "explicit"),
+        ],
+        completed={"lane_count": _parameter([1, 2])},
+    )
+
+    decision = SceneConstructionRouter().route(
+        spec,
+        prompt="On a two-lane bidirectional road, a child emerges from behind a van.",
+    )
+
+    assert decision.mode == SceneConstructionMode.SYNTHESIZE_NEW
+    assert "lane_count=2" in decision.explicit_global_constraints
+    assert "road_directionality=bidirectional" in decision.explicit_global_constraints
+
+
+def test_vehicle_merges_into_ego_lane_is_not_global_merge_topology():
+    spec = _spec(
+        [
+            _node("road_topology", "straight_segment", "hierarchical_default"),
+            _node("ego_traffic_space", "single_lane", "hierarchical_default"),
+            _node("hazard_interaction", "lane_change", "inferred"),
+            _node("target_region", "ego_lane", "explicit"),
+        ]
+    )
+
+    decision = SceneConstructionRouter().route(
+        spec,
+        prompt="A vehicle merges into the ego lane ahead of ego.",
+    )
+
+    assert decision.mode == SceneConstructionMode.EDIT_EXISTING
+
+
+def test_highway_merge_ramp_is_global_topology():
+    spec = _spec(
+        [
+            _node("road_topology", "straight_segment", "hierarchical_default"),
+            _node("ego_traffic_space", "single_lane", "hierarchical_default"),
+        ]
+    )
+
+    decision = SceneConstructionRouter().route(
+        spec,
+        prompt="On a highway merge ramp, a pedestrian hazard is introduced.",
+    )
+
+    assert decision.mode == SceneConstructionMode.SYNTHESIZE_NEW
+    assert "road_topology=merge_diverge" in decision.explicit_global_constraints
+
+
+def test_explicit_lane_width_is_global_geometry():
+    spec = _spec(
+        [
+            _node("road_topology", "straight_segment", "hierarchical_default"),
+            _node("ego_traffic_space", "single_lane", "hierarchical_default"),
+        ]
+    )
+
+    decision = SceneConstructionRouter().route(
+        spec,
+        prompt="On a road with lane width 3.5 m, a pedestrian crosses the ego path.",
+    )
+
+    assert decision.mode == SceneConstructionMode.SYNTHESIZE_NEW
+    assert "lane_width_m=3.5" in decision.explicit_global_constraints
