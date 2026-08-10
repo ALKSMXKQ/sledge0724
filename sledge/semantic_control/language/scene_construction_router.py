@@ -1,12 +1,12 @@
 """Route hierarchical language specs to B0 editing or full scene synthesis.
 
 The router intentionally separates *global road structure* from *local hazard
-semantics*.  Merely mentioning the ego lane/path, a roadside, or a pedestrian
-crossing a lane never triggers full synthesis.  Full synthesis is selected only
+semantics*. Merely mentioning the ego lane/path, a roadside, or a pedestrian
+crossing a lane never triggers full synthesis. Full synthesis is selected only
 when a global road constraint is explicitly provided by the user.
 
 The hierarchy always contains a value for every node, therefore routing must use
-both ``value`` and ``source``.  A hierarchical default such as
+both ``value`` and ``source``. A hierarchical default such as
 ``road_topology=straight_segment`` is not evidence that the prompt requested a
 new road.
 """
@@ -14,9 +14,9 @@ new road.
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
+from typing import Any, Dict, FrozenSet, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 
 class SceneConstructionMode(str, Enum):
@@ -26,7 +26,7 @@ class SceneConstructionMode(str, Enum):
     SYNTHESIZE_NEW = "synthesize_new"
 
 
-# Provenance values that mean the user really supplied the value.  ``normalized``
+# Provenance values that mean the user really supplied the value. ``normalized``
 # is deliberately excluded: in the current hierarchy it can also be produced
 # from parser normalization/defaulting and therefore is not a safe synthesis
 # trigger by itself.
@@ -40,10 +40,10 @@ EXPLICIT_SOURCES = frozenset(
     }
 )
 
-# ``road_topology`` is inherently global.  ``ego_traffic_space`` is mixed: some
+# ``road_topology`` is inherently global. ``ego_traffic_space`` is mixed: some
 # values describe global lane organization while others merely locate the local
-# hazard.  Only the structural subset may trigger synthesis.
-GLOBAL_HIERARCHY_NODE_VALUES: Mapping[str, frozenset[str] | None] = {
+# hazard. Only the structural subset may trigger synthesis.
+GLOBAL_HIERARCHY_NODE_VALUES: Mapping[str, Optional[FrozenSet[str]]] = {
     "road_topology": None,
     "ego_traffic_space": frozenset(
         {
@@ -60,8 +60,8 @@ GLOBAL_HIERARCHY_NODE_VALUES: Mapping[str, frozenset[str] | None] = {
 }
 
 # Global road geometry/layout parameters live in ``parameter_layer.completed``
-# rather than the hierarchy.  They only trigger synthesis when their provenance
-# is explicit.  The same parameters remain in the template in edit mode but are
+# rather than the hierarchy. They only trigger synthesis when their provenance
+# is explicit. The same parameters remain in the template in edit mode but are
 # marked inactive so that B0 geometry wins.
 GLOBAL_ROAD_PARAMETER_NAMES = frozenset(
     {
@@ -84,7 +84,7 @@ GLOBAL_ROAD_PARAMETER_NAMES = frozenset(
 )
 
 # These hierarchy nodes describe the hazardous interaction itself and are always
-# local with respect to construction routing.  In particular target_region may
+# local with respect to construction routing. In particular target_region may
 # be ``ego_lane`` / ``ego_path`` without requesting a new road.
 LOCAL_HAZARD_NODE_NAMES = (
     "primary_actor_group",
@@ -137,7 +137,7 @@ DEFAULTISH_SOURCES = frozenset(
     }
 )
 
-UNKNOWN_VALUES = {None, "", "unknown", "unknown_side", "unspecified"}
+UNKNOWN_TEXT_VALUES = frozenset({"", "unknown", "unknown_side", "unspecified"})
 
 
 @dataclass(frozen=True)
@@ -192,7 +192,7 @@ class SceneConstructionRouter:
             allowed_values = GLOBAL_HIERARCHY_NODE_VALUES[node_type]
             if not self._is_explicit(source):
                 continue
-            if value in UNKNOWN_VALUES:
+            if self._is_unknown(value):
                 continue
             if allowed_values is not None and str(value) not in allowed_values:
                 continue
@@ -211,7 +211,7 @@ class SceneConstructionRouter:
                 continue
             source = str(entry.get("source", "unknown"))
             value = entry.get("value")
-            if not self._is_explicit(source) or value in UNKNOWN_VALUES:
+            if not self._is_explicit(source) or self._is_unknown(value):
                 continue
             global_evidence.append(
                 RoutingEvidence(
@@ -256,6 +256,14 @@ class SceneConstructionRouter:
         return str(source).strip().lower() in EXPLICIT_SOURCES
 
     @staticmethod
+    def _is_unknown(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value.strip().lower() in UNKNOWN_TEXT_VALUES
+        return False
+
+    @staticmethod
     def _hierarchy_nodes(spec: Mapping[str, Any]) -> List[Mapping[str, Any]]:
         layer = spec.get("hierarchy_layer", {})
         if not isinstance(layer, Mapping):
@@ -287,7 +295,7 @@ class SceneConstructionRouter:
                 continue
             value = node.get("value")
             source = str(node.get("source", "unknown"))
-            if value in UNKNOWN_VALUES:
+            if self._is_unknown(value):
                 continue
             # Keep semantically meaningful inferred values, but omit pure
             # hierarchy defaults so the list remains an explanation of the
@@ -302,7 +310,7 @@ class SceneConstructionRouter:
                 continue
             value = entry.get("value")
             source = str(entry.get("source", "unknown"))
-            if value in UNKNOWN_VALUES or not self._is_explicit(source):
+            if self._is_unknown(value) or not self._is_explicit(source):
                 continue
             label = f"{name}={value}"
             if label not in constraints:
