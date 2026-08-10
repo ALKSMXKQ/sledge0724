@@ -52,7 +52,6 @@ from sledge.semantic_control.language.hierarchical_ontology import (
     HierarchyNode,
 )
 from sledge.semantic_control.language.hierarchical_pipeline import (
-    DefaultLanguageUnderstandingPipeline,
     HierarchicalEventFramePipeline,
     HierarchicalParameterFiller,
     HierarchicalPipelineResult,
@@ -69,6 +68,11 @@ from sledge.semantic_control.language.routed_hierarchical_pipeline import (
     DefaultRoutedLanguageUnderstandingPipeline,
     RoutedHierarchicalEventFramePipeline,
 )
+
+# Package-level callers now receive a routed spec by default. The original
+# HierarchicalEventFramePipeline remains available explicitly for low-level
+# hierarchy-only tests and backwards-compatible debugging.
+DefaultLanguageUnderstandingPipeline = RoutedHierarchicalEventFramePipeline
 
 
 __all__ = [
