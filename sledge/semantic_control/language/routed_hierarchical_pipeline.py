@@ -17,7 +17,7 @@ class RoutedHierarchicalEventFramePipeline(HierarchicalEventFramePipeline):
     """Add a provenance-aware B1 construction decision to the base pipeline.
 
     The parser, verifier, hierarchy resolver and parameter filler remain exactly
-    the same as the existing hierarchical implementation.  Routing is a final
+    the same as the existing hierarchical implementation. Routing is a final
     post-processing layer, which keeps language-understanding regressions
     isolated from construction policy changes.
     """
@@ -33,7 +33,7 @@ class RoutedHierarchicalEventFramePipeline(HierarchicalEventFramePipeline):
 
     def parse_to_result(self, sentence: str) -> HierarchicalPipelineResult:
         result = super().parse_to_result(sentence)
-        result.spec = self.scene_router.attach(result.spec)
+        result.spec = self.scene_router.attach(result.spec, prompt=sentence)
 
         validation = result.spec.setdefault("validation_layer", {})
         construction = result.spec["scene_construction"]
