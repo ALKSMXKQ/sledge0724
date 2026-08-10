@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the recursive hierarchical natural-language pipeline."""
+"""Run the recursive hierarchical natural-language pipeline with scene routing."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable
 
-from sledge.semantic_control.language.hierarchical_pipeline import (
-    HierarchicalEventFramePipeline,
+from sledge.semantic_control.language.routed_hierarchical_pipeline import (
+    RoutedHierarchicalEventFramePipeline,
 )
 
 
@@ -44,7 +44,7 @@ def main() -> None:
     parser.add_argument("--no-repair", action="store_true")
     args = parser.parse_args()
 
-    pipeline = HierarchicalEventFramePipeline(
+    pipeline = RoutedHierarchicalEventFramePipeline(
         llm_provider=args.llm_provider,
         llm_model=args.llm_model,
         ollama_url=args.ollama_url,
@@ -59,6 +59,7 @@ def main() -> None:
             "frame_issues": result.frame_issues,
             "spec_issues": result.spec_issues,
             "hierarchy_issues": result.hierarchy_issues,
+            "scene_construction": result.spec.get("scene_construction", {}),
             "frame": result.frame.to_dict(),
             "spec": result.spec,
         }
@@ -84,6 +85,7 @@ def main() -> None:
                         "frame_issues": result.frame_issues,
                         "spec_issues": result.spec_issues,
                         "hierarchy_issues": result.hierarchy_issues,
+                        "scene_construction": result.spec.get("scene_construction", {}),
                         "frame": result.frame.to_dict(),
                         "spec": result.spec,
                     },
