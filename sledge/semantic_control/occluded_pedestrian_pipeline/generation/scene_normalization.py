@@ -44,8 +44,14 @@ def normalize_editable_scene(scene: Any) -> Tuple[Any, Dict[str, Any]]:
         out_mask = np.zeros((capacity,), dtype=mask.dtype if mask.size else np.float32)
         if existing:
             out_states[:existing] = rows
-        if mask.size:
-            out_mask[: min(existing, mask.size)] = mask[: min(existing, mask.size)]
+
+            # Variable-length SLEDGE raw caches contain semantic entity rows
+            # even when their stored raw mask is all False. Downstream raw
+            # preprocessing consumes the rows themselves and does not use that
+            # mask to discard entities. Treat every pre-existing row as
+            # occupied so insertion can only use the newly appended slot and
+            # compaction can never erase the source scene.
+            out_mask[:existing] = True
         elem.states = out_states
         elem.mask = out_mask
         report["elements"][name] = {
@@ -53,6 +59,12 @@ def normalize_editable_scene(scene: Any) -> Tuple[Any, Dict[str, Any]]:
             "before_mask_shape": list(mask.shape),
             "after_states_shape": list(out_states.shape),
             "after_mask_shape": list(out_mask.shape),
+            "source_rows_forced_active": int(
+                existing
+            ),
+            "insertion_slot_index": int(
+                existing
+            ),
         }
     return normalized, report
 

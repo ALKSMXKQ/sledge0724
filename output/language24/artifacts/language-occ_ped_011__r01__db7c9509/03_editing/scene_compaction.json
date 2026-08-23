@@ -1,0 +1,63 @@
+{
+  "schema_version": "edited_scene_compaction_v1",
+  "elements": {
+    "vehicles": {
+      "before_rows": 22,
+      "after_rows": 22,
+      "old_to_new": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6,
+        "7": 7,
+        "8": 8,
+        "9": 9,
+        "10": 10,
+        "11": 11,
+        "12": 12,
+        "13": 13,
+        "14": 14,
+        "15": 15,
+        "16": 16,
+        "17": 17,
+        "18": 18,
+        "19": 19,
+        "20": 20,
+        "21": 21
+      }
+    },
+    "pedestrians": {
+      "before_rows": 6,
+      "after_rows": 6,
+      "old_to_new": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5
+      }
+    },
+    "static_objects": {
+      "before_rows": 7,
+      "after_rows": 6,
+      "old_to_new": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5
+      }
+    }
+  },
+  "final_indices": {
+    "pedestrian_index": 5,
+    "occluder_elem_name": "vehicles",
+    "occluder_index": 21,
+    "primary_actor_index": 5
+  }
+}

@@ -1,0 +1,2286 @@
+{
+  "schema_version": "eventframe_v6_nuplan_hierarchical_tree",
+  "scenario_family": "pedestrian_or_cyclist_crossing",
+  "semantic_slots": {
+    "actor_type": "pedestrian",
+    "actor_source_text": "pedestrian",
+    "predicate_text": "enters ego lane",
+    "event_type": "enter_ego_lane",
+    "motion_axis": "lateral",
+    "path_or_object": "ego lane",
+    "source_relation": "from_curb",
+    "target_relation": "ego_lane",
+    "relation_function": "event_anchor",
+    "anchor_region": "front",
+    "visibility": "occluded",
+    "occlusion_enabled": true,
+    "occluder_type": "truck",
+    "ego_maneuver": "drive_forward",
+    "road_topology": "straight_lane",
+    "road_layout": "ego_lane",
+    "target_path": "ego_lane",
+    "source_side": "curbside",
+    "motion_geometry": "lateral",
+    "actor_role": "crossing_actor",
+    "conflict_geometry": "lateral",
+    "conflict_direction": "crossing",
+    "lane_context": "ego_lane",
+    "speed_relation": "unknown",
+    "interaction_goal": "avoid_crossing_actor",
+    "risk_level": "aggressive",
+    "collision_allowed": false,
+    "obstacle_type": "unknown",
+    "fine_grained_conflict_type": "enter_ego_lane",
+    "fine_grained_actor_role": "crossing_actor",
+    "distance_relation": "close",
+    "nuplan_actor_category": "pedestrian",
+    "language_actor_detail": "adult_or_unspecified",
+    "motion_direction": "occluder_to_ego_path"
+  },
+  "actor_layer": {
+    "primary_actor": "pedestrian",
+    "actor_role": "crossing_actor",
+    "actor_source_text": "pedestrian",
+    "base_actor_type": "pedestrian",
+    "nuplan_tracked_object_type": "TrackedObjectType.PEDESTRIAN",
+    "sledge_collection": "pedestrians",
+    "language_actor_detail": "adult_or_unspecified"
+  },
+  "interaction_layer": {
+    "conflict_type": "lateral_conflict",
+    "anchor_region": "front",
+    "relative_relation": "unknown",
+    "relation_function": "event_anchor",
+    "source_relation": "from_curb",
+    "target_relation": "ego_lane",
+    "conflict_direction": "crossing",
+    "distance_relation": "close",
+    "interaction_goal": "avoid_crossing_actor",
+    "speed_relation": "unknown"
+  },
+  "motion_layer": {
+    "hazard_event_type": "enter_ego_lane",
+    "predicate_text": "enters ego lane",
+    "motion_axis": "lateral",
+    "motion_direction": "occluder_to_ego_path",
+    "path_or_object": "ego_lane",
+    "ego_maneuver": "drive_forward"
+  },
+  "event_layer": {
+    "event_sequence": [
+      {
+        "order": 1,
+        "actor": "ego",
+        "event_type": "ego_driving",
+        "action": "drive_forward",
+        "relation_to_previous": "start",
+        "evidence_text": ""
+      },
+      {
+        "order": 2,
+        "actor": "pedestrian",
+        "event_type": "actor_occluded",
+        "action": "hidden_behind_parked_truck_occluder",
+        "relation_to_previous": "during_ego_baseline",
+        "evidence_text": "abruptly enters the ego lane."
+      },
+      {
+        "order": 3,
+        "actor": "pedestrian",
+        "event_type": "occluded_actor_becomes_visible",
+        "action": "emerge_from_occluder_toward_ego_path",
+        "relation_to_previous": "after_hidden_state",
+        "evidence_text": "abruptly enters the ego lane."
+      },
+      {
+        "order": 4,
+        "actor": "pedestrian",
+        "event_type": "enter_ego_lane",
+        "action": "enter_ego_lane_from_occluder",
+        "relation_to_previous": "after_reveal",
+        "evidence_text": "abruptly enters the ego lane."
+      },
+      {
+        "order": 5,
+        "actor": "ego_and_pedestrian",
+        "event_type": "conflict_point_approach",
+        "action": "approach_shared_conflict_point",
+        "relation_to_previous": "after_lane_entry",
+        "evidence_text": "derived: paths intersect at conflict_point_xy"
+      },
+      {
+        "order": 6,
+        "actor": "ego",
+        "event_type": "ego_response",
+        "action": "brake_or_emergency_brake",
+        "relation_to_previous": "after_kinematic_evaluation",
+        "evidence_text": "derived: select brake severity after TTC and stopping-distance check"
+      }
+    ],
+    "event_sequence_labels": [
+      "1:ego:ego_driving:drive_forward",
+      "2:pedestrian:actor_occluded:hidden_behind_parked_truck_occluder",
+      "3:pedestrian:occluded_actor_becomes_visible:emerge_from_occluder_toward_ego_path",
+      "4:pedestrian:enter_ego_lane:enter_ego_lane_from_occluder",
+      "5:ego_and_pedestrian:conflict_point_approach:approach_shared_conflict_point",
+      "6:ego:ego_response:brake_or_emergency_brake"
+    ],
+    "num_events": 6,
+    "fine_grained_conflict_type": "enter_ego_lane",
+    "fine_grained_actor_role": "crossing_actor",
+    "sequence_policy": "occlusion_reveal_lane_entry_are_distinct_events"
+  },
+  "object_layer": {
+    "occlusion": {
+      "enabled": true,
+      "occluder_type": "truck",
+      "occlusion_level": "full",
+      "relation_to_actor": "behind"
+    },
+    "static_obstacle": {
+      "enabled": false,
+      "obstacle_type": "unknown"
+    }
+  },
+  "road_layer": {
+    "road_type": "straight_lane",
+    "lane_context": "ego_lane",
+    "road_topology": "straight_lane",
+    "generated_road_layout": "ego_lane",
+    "anchor_type": "front",
+    "has_crosswalk": false
+  },
+  "risk_layer": {
+    "risk_level": "aggressive",
+    "collision_allowed": false
+  },
+  "validation_layer": {
+    "require_visibility_match": true,
+    "composition_policy": "nuplan_projected_recursive_parent_constrained_hierarchy",
+    "legacy_spec_valid": true,
+    "legacy_spec_errors": [],
+    "hierarchy_valid": true,
+    "hierarchy_issues": [],
+    "nuplan_projection_valid": true,
+    "pipeline_design": "eventframe_v6_nuplan_parent_constrained_tree"
+  },
+  "parameter_layer": {
+    "required_missing": [],
+    "defaultable_missing": [],
+    "distributional_defaults": {},
+    "completed": {
+      "actor_speed_mps": {
+        "value": [
+          1.0,
+          2.0
+        ],
+        "unit": "m/s",
+        "source": "hierarchical_prior",
+        "reason": "nuPlan/SLEDGE actor-speed prior for executable category pedestrian",
+        "confidence": 0.86,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake",
+          "risk_level": "aggressive"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "ego_speed_mps": {
+        "value": [
+          5.0,
+          10.0
+        ],
+        "unit": "m/s",
+        "source": "hierarchical_prior",
+        "reason": "ego-speed prior for curbside_zone under aggressive semantic risk",
+        "confidence": 0.76,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake",
+          "risk_level": "aggressive"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "initial_distance_m": {
+        "value": [
+          5.0,
+          18.0
+        ],
+        "unit": "m",
+        "source": "inferred_default",
+        "reason": "distance from ego to lateral conflict region",
+        "confidence": 0.6,
+        "evidence": [],
+        "conditioned_on": {},
+        "condition_path": "",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "crossing_direction": {
+        "value": "occluder_to_ego_path",
+        "unit": "",
+        "source": "derived_constraint",
+        "reason": "the actor moves from its selected occluder toward the ego path",
+        "confidence": 1.0,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "target_path": {
+        "value": "ego_lane",
+        "unit": "",
+        "source": "inferred_default",
+        "reason": "target path inferred from EventFrame slot",
+        "confidence": 0.6,
+        "evidence": [],
+        "conditioned_on": {},
+        "condition_path": "",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "trigger_condition": {
+        "value": "actor_enters_or_crosses_ego_path",
+        "unit": "",
+        "source": "inferred_default",
+        "reason": "lateral conflict starts when the actor enters or crosses the ego conflict region",
+        "confidence": 0.6,
+        "evidence": [],
+        "conditioned_on": {},
+        "condition_path": "",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "occlusion_enabled": {
+        "value": true,
+        "unit": "",
+        "source": "user_input",
+        "reason": "the prompt explicitly defines an occluded-emergence relation",
+        "confidence": 1.0,
+        "evidence": [
+          "abruptly enters the ego lane."
+        ],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "occluder_type": {
+        "value": "vehicle",
+        "unit": "",
+        "source": "user_input",
+        "reason": "the prompt occluder is normalized to a nuPlan/SLEDGE-supported category",
+        "confidence": 0.99,
+        "evidence": [
+          "abruptly enters the ego lane."
+        ],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "reveal_distance_m": {
+        "value": [
+          3.0,
+          8.0
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "ego-to-conflict distance when the actor first clears the occluder",
+        "confidence": 0.82,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake",
+          "risk_level": "aggressive"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "occluder_lateral_offset_m": {
+        "value": [
+          1.0,
+          4.0
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "roadside offset from the ego-path boundary",
+        "confidence": 0.72,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "lane_width_m": {
+        "value": [
+          3.2,
+          3.8
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "nuPlan-compatible lane-width sampling range",
+        "confidence": 0.78,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "lane_count": {
+        "value": [
+          1,
+          2
+        ],
+        "unit": "",
+        "source": "hierarchical_prior",
+        "reason": "lane-count prior for curbside_zone",
+        "confidence": 0.7,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "road_curvature": {
+        "value": [
+          -0.005,
+          0.005
+        ],
+        "unit": "1/m",
+        "source": "hierarchical_prior",
+        "reason": "near-straight local road curvature prior",
+        "confidence": 0.68,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment"
+        },
+        "condition_path": "road_topology=straight_segment",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "ego_distance_to_conflict_m": {
+        "value": [
+          6.0,
+          14.0
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "distance from ego origin to the selected conflict point",
+        "confidence": 0.78,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake",
+          "risk_level": "aggressive"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "conflict_point_xy": {
+        "value": {
+          "frame": "ego_local",
+          "x_m": {
+            "reference": "ego_distance_to_conflict_m"
+          },
+          "y_m": [
+            -0.5,
+            0.5
+          ]
+        },
+        "unit": "m",
+        "source": "derived_constraint",
+        "reason": "conflict point lies ahead on the ego path",
+        "confidence": 0.95,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "ego_acceleration_mps2": {
+        "value": [
+          0.0,
+          0.0
+        ],
+        "unit": "m/s^2",
+        "source": "hierarchical_prior",
+        "reason": "ego initially follows a constant-speed baseline",
+        "confidence": 0.8,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "actor_acceleration_mps2": {
+        "value": [
+          0.0,
+          1.0
+        ],
+        "unit": "m/s^2",
+        "source": "hierarchical_prior",
+        "reason": "bounded initial actor acceleration prior",
+        "confidence": 0.68,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "actor_start_time_s": {
+        "value": [
+          0.2,
+          2.0
+        ],
+        "unit": "s",
+        "source": "hierarchical_prior",
+        "reason": "actor motion begins after the ego baseline is established",
+        "confidence": 0.72,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "minimum_clearance_m": {
+        "value": [
+          0.5,
+          2.0
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "non-collision safety clearance range",
+        "confidence": 0.7,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake",
+          "risk_level": "aggressive"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "braking_deceleration_mps2": {
+        "value": [
+          3.0,
+          7.0
+        ],
+        "unit": "m/s^2",
+        "source": "hierarchical_prior",
+        "reason": "candidate ego braking envelope; exact response is selected after kinematic evaluation",
+        "confidence": 0.72,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "actor_heading": {
+        "value": {
+          "frame": "ego_local",
+          "definition": "unit_vector(occluder_position, nearest_point_on_ego_path)"
+        },
+        "unit": "",
+        "source": "derived_constraint",
+        "reason": "heading is uniquely derived from occluder position toward the ego path",
+        "confidence": 1.0,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "occluder_side": {
+        "value": {
+          "distribution": "categorical",
+          "values": [
+            "left",
+            "right"
+          ],
+          "sample_once": true
+        },
+        "unit": "",
+        "source": "categorical_prior",
+        "reason": "one occluder side is sampled once; direction is then derived from that position toward ego",
+        "confidence": 0.65,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside",
+        "is_assumption": true,
+        "alternatives": [
+          "left",
+          "right"
+        ]
+      },
+      "occluder_position": {
+        "value": {
+          "frame": "ego_local",
+          "x_m": [
+            4.0,
+            12.0
+          ],
+          "side": {
+            "reference": "occluder_side"
+          },
+          "lateral_offset_m": {
+            "reference": "occluder_lateral_offset_m"
+          },
+          "placement": "outside_ego_lane"
+        },
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "occluder is placed roadside and ahead of ego",
+        "confidence": 0.82,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "occluder_length_m": {
+        "value": [
+          6.0,
+          12.0
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "size prior for parked_truck_occluder",
+        "confidence": 0.76,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "occluder_width_m": {
+        "value": [
+          2.2,
+          2.8
+        ],
+        "unit": "m",
+        "source": "hierarchical_prior",
+        "reason": "size prior for parked_truck_occluder",
+        "confidence": 0.76,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": true,
+        "alternatives": []
+      },
+      "actor_initial_position": {
+        "value": {
+          "frame": "ego_local",
+          "relation": "behind_occluder_away_from_ego_path",
+          "occluder_reference": "occluder_position",
+          "hidden_offset_m": [
+            0.5,
+            2.0
+          ]
+        },
+        "unit": "m",
+        "source": "derived_constraint",
+        "reason": "pedestrian begins behind the occluder on the side away from the ego path",
+        "confidence": 0.96,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "initial_gap_m": {
+        "value": {
+          "definition": "distance(ego_position, actor_initial_position)"
+        },
+        "unit": "m",
+        "source": "derived_constraint",
+        "reason": "initial gap is derived after actor and occluder positions are sampled",
+        "confidence": 1.0,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder",
+        "is_assumption": false,
+        "alternatives": []
+      },
+      "time_to_collision_s": {
+        "value": {
+          "definition": "ego_distance_to_conflict_m / max(ego_speed_mps, epsilon)",
+          "evaluate_at": "actor_reveal_time"
+        },
+        "unit": "s",
+        "source": "derived_constraint",
+        "reason": "TTC is computed after sampling rather than independently sampled",
+        "confidence": 1.0,
+        "evidence": [],
+        "conditioned_on": {
+          "road_topology": "straight_segment",
+          "ego_traffic_space": "curbside_zone",
+          "primary_actor_group": "vulnerable_road_user",
+          "primary_actor_type": "pedestrian",
+          "hazard_interaction": "occluded_emergence",
+          "auxiliary_entity": "parked_truck_occluder",
+          "source_region": "curbside",
+          "target_region": "ego_lane",
+          "anchor_region": "near_front",
+          "visibility": "fully_occluded",
+          "motion_direction": "occluder_to_ego_path",
+          "trigger_event": "occluded_actor_becomes_visible",
+          "ego_required_response": "brake_or_emergency_brake",
+          "risk_level": "aggressive"
+        },
+        "condition_path": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+        "is_assumption": false,
+        "alternatives": []
+      }
+    },
+    "completion_policy": "nuplan_projected_parent_path_conditioned_template",
+    "hierarchical_context": {
+      "road_topology": "straight_segment",
+      "ego_traffic_space": "curbside_zone",
+      "primary_actor_group": "vulnerable_road_user",
+      "primary_actor_type": "pedestrian",
+      "hazard_interaction": "occluded_emergence",
+      "auxiliary_entity": "parked_truck_occluder",
+      "source_region": "curbside",
+      "target_region": "ego_lane",
+      "anchor_region": "near_front",
+      "visibility": "fully_occluded",
+      "motion_direction": "occluder_to_ego_path",
+      "trigger_event": "occluded_actor_becomes_visible",
+      "ego_required_response": "brake_or_emergency_brake",
+      "risk_level": "aggressive"
+    },
+    "hierarchical_path_signature": "road_topology=straight_segment -> ego_traffic_space=curbside_zone -> primary_actor_group=vulnerable_road_user -> primary_actor_type=pedestrian -> hazard_interaction=occluded_emergence -> auxiliary_entity=parked_truck_occluder -> source_region=curbside -> target_region=ego_lane -> anchor_region=near_front -> visibility=fully_occluded -> motion_direction=occluder_to_ego_path -> trigger_event=occluded_actor_becomes_visible -> ego_required_response=brake_or_emergency_brake -> risk_level=aggressive",
+    "parameter_constraints": [
+      {
+        "id": "conflict_on_ego_path",
+        "type": "hard",
+        "expression": "conflict_point_xy.y_m lies within ego lane boundaries"
+      },
+      {
+        "id": "ttc_is_derived",
+        "type": "derived",
+        "expression": "time_to_collision_s is calculated from sampled positions and velocities"
+      },
+      {
+        "id": "response_after_kinematics",
+        "type": "decision",
+        "expression": "choose brake vs emergency_brake after TTC and stopping-distance evaluation"
+      },
+      {
+        "id": "nuplan_pedestrian_category",
+        "type": "hard",
+        "expression": "primary actor is TrackedObjectType.PEDESTRIAN and is stored in SledgeVectorRaw.pedestrians"
+      },
+      {
+        "id": "occluder_outside_ego_lane",
+        "type": "hard",
+        "expression": "occluder footprint does not overlap the ego lane center corridor"
+      },
+      {
+        "id": "actor_hidden_before_reveal",
+        "type": "hard",
+        "expression": "line_of_sight(ego, actor) intersects occluder before reveal_time_s"
+      },
+      {
+        "id": "unique_relative_direction",
+        "type": "hard",
+        "expression": "actor velocity points from occluder_position to nearest_point_on_ego_path"
+      },
+      {
+        "id": "actor_path_intersects_ego_path",
+        "type": "hard",
+        "expression": "pedestrian trajectory intersects ego path at conflict_point_xy"
+      },
+      {
+        "id": "reveal_before_conflict",
+        "type": "hard",
+        "expression": "0 < reveal_distance_m <= ego_distance_to_conflict_m"
+      }
+    ],
+    "original_required_missing": [
+      "actor_speed",
+      "ego_speed",
+      "initial_distance"
+    ],
+    "original_defaultable_missing": [],
+    "resolved_missing": [
+      {
+        "original_name": "actor_speed",
+        "resolved_as": "actor_speed_mps"
+      },
+      {
+        "original_name": "ego_speed",
+        "resolved_as": "ego_speed_mps"
+      },
+      {
+        "original_name": "initial_distance",
+        "resolved_as": "ego_distance_to_conflict_m"
+      }
+    ],
+    "unresolved_required": [],
+    "template_required_parameters": [
+      "actor_acceleration_mps2",
+      "actor_heading",
+      "actor_initial_position",
+      "actor_speed_mps",
+      "actor_start_time_s",
+      "braking_deceleration_mps2",
+      "conflict_point_xy",
+      "ego_acceleration_mps2",
+      "ego_distance_to_conflict_m",
+      "ego_speed_mps",
+      "initial_gap_m",
+      "lane_count",
+      "lane_width_m",
+      "minimum_clearance_m",
+      "occluder_lateral_offset_m",
+      "occluder_length_m",
+      "occluder_position",
+      "occluder_width_m",
+      "reveal_distance_m",
+      "road_curvature",
+      "time_to_collision_s"
+    ],
+    "template_missing_parameters": [],
+    "parameter_template_complete": true
+  },
+  "evidence": {
+    "sentence": "A pedestrian is fully hidden by a parked truck at the curb, then abruptly enters the ego lane.",
+    "actor": "abruptly enters the ego lane.",
+    "event": "abruptly enters the ego lane.",
+    "ego_event": "",
+    "road_context": "abruptly enters the ego lane.",
+    "occlusion": "abruptly enters the ego lane.",
+    "event_sequence": [
+      "abruptly enters the ego lane.",
+      "inferred: ego approaches the conflict region",
+      "inferred: ego response required by hazard"
+    ]
+  },
+  "confidence": 0.72,
+  "hierarchy_layer": {
+    "schema_version": "eventframe_v6_nuplan_hierarchical_tree",
+    "selected_path": [
+      {
+        "level": 1,
+        "node_type": "road_topology",
+        "value": "straight_segment",
+        "source": "normalized",
+        "confidence": 0.9,
+        "evidence": "",
+        "parent_type": "scene_root",
+        "parent_value": "ego_centered_hazard_scene",
+        "allowed_values_at_level": [
+          "intersection",
+          "merge_diverge",
+          "roundabout",
+          "straight_segment",
+          "work_zone"
+        ],
+        "next_node_type": "ego_traffic_space",
+        "allowed_children": [
+          "bidirectional_road",
+          "crosswalk_zone",
+          "curbside_zone",
+          "same_direction_multi_lane",
+          "single_lane"
+        ]
+      },
+      {
+        "level": 2,
+        "node_type": "ego_traffic_space",
+        "value": "curbside_zone",
+        "source": "inferred",
+        "confidence": 0.84,
+        "evidence": "",
+        "parent_type": "road_topology",
+        "parent_value": "straight_segment",
+        "allowed_values_at_level": [
+          "bidirectional_road",
+          "crosswalk_zone",
+          "curbside_zone",
+          "same_direction_multi_lane",
+          "single_lane"
+        ],
+        "next_node_type": "primary_actor_group",
+        "allowed_children": [
+          "static_object",
+          "vehicle",
+          "vulnerable_road_user"
+        ]
+      },
+      {
+        "level": 3,
+        "node_type": "primary_actor_group",
+        "value": "vulnerable_road_user",
+        "source": "normalized_to_nuplan",
+        "confidence": 0.99,
+        "evidence": "pedestrian",
+        "parent_type": "ego_traffic_space",
+        "parent_value": "curbside_zone",
+        "allowed_values_at_level": [
+          "static_object",
+          "vehicle",
+          "vulnerable_road_user"
+        ],
+        "next_node_type": "primary_actor_type",
+        "allowed_children": [
+          "cyclist",
+          "pedestrian"
+        ]
+      },
+      {
+        "level": 4,
+        "node_type": "primary_actor_type",
+        "value": "pedestrian",
+        "source": "normalized_to_nuplan",
+        "confidence": 0.99,
+        "evidence": "pedestrian",
+        "parent_type": "primary_actor_group",
+        "parent_value": "vulnerable_road_user",
+        "allowed_values_at_level": [
+          "cyclist",
+          "pedestrian"
+        ],
+        "next_node_type": "hazard_interaction",
+        "allowed_children": [
+          "enter_ego_lane",
+          "longitudinal_occupation",
+          "occluded_emergence",
+          "path_crossing"
+        ]
+      },
+      {
+        "level": 5,
+        "node_type": "hazard_interaction",
+        "value": "occluded_emergence",
+        "source": "explicit",
+        "confidence": 0.98,
+        "evidence": "",
+        "parent_type": "primary_actor_type",
+        "parent_value": "pedestrian",
+        "allowed_values_at_level": [
+          "enter_ego_lane",
+          "longitudinal_occupation",
+          "occluded_emergence",
+          "path_crossing"
+        ],
+        "next_node_type": "auxiliary_entity",
+        "allowed_children": [
+          "barrier_occluder",
+          "building_edge_occluder",
+          "bus_occluder",
+          "generic_vehicle_occluder",
+          "parked_car_occluder",
+          "parked_truck_occluder",
+          "van_occluder",
+          "vegetation_occluder"
+        ]
+      },
+      {
+        "level": 6,
+        "node_type": "auxiliary_entity",
+        "value": "parked_truck_occluder",
+        "source": "normalized_explicit",
+        "confidence": 0.98,
+        "evidence": "parked truck",
+        "parent_type": "hazard_interaction",
+        "parent_value": "occluded_emergence",
+        "allowed_values_at_level": [
+          "barrier_occluder",
+          "building_edge_occluder",
+          "bus_occluder",
+          "generic_vehicle_occluder",
+          "parked_car_occluder",
+          "parked_truck_occluder",
+          "van_occluder",
+          "vegetation_occluder"
+        ],
+        "next_node_type": "source_region",
+        "allowed_children": [
+          "curbside",
+          "left_side",
+          "right_side"
+        ]
+      },
+      {
+        "level": 7,
+        "node_type": "source_region",
+        "value": "curbside",
+        "source": "explicit",
+        "confidence": 0.9,
+        "evidence": "",
+        "parent_type": "auxiliary_entity",
+        "parent_value": "parked_truck_occluder",
+        "allowed_values_at_level": [
+          "curbside",
+          "left_side",
+          "right_side"
+        ],
+        "next_node_type": "target_region",
+        "allowed_children": [
+          "ego_lane",
+          "ego_path"
+        ]
+      },
+      {
+        "level": 8,
+        "node_type": "target_region",
+        "value": "ego_lane",
+        "source": "explicit",
+        "confidence": 0.98,
+        "evidence": "ego lane",
+        "parent_type": "source_region",
+        "parent_value": "curbside",
+        "allowed_values_at_level": [
+          "ego_lane",
+          "ego_path"
+        ],
+        "next_node_type": "anchor_region",
+        "allowed_children": [
+          "crosswalk",
+          "far_front",
+          "intersection_center",
+          "lane_boundary",
+          "near_front",
+          "roundabout_entry"
+        ]
+      },
+      {
+        "level": 9,
+        "node_type": "anchor_region",
+        "value": "near_front",
+        "source": "inferred",
+        "confidence": 0.72,
+        "evidence": "",
+        "parent_type": "target_region",
+        "parent_value": "ego_lane",
+        "allowed_values_at_level": [
+          "crosswalk",
+          "far_front",
+          "intersection_center",
+          "lane_boundary",
+          "near_front",
+          "roundabout_entry"
+        ],
+        "next_node_type": "visibility",
+        "allowed_children": [
+          "fully_occluded",
+          "partially_occluded"
+        ]
+      },
+      {
+        "level": 10,
+        "node_type": "visibility",
+        "value": "fully_occluded",
+        "source": "explicit",
+        "confidence": 0.96,
+        "evidence": "hidden",
+        "parent_type": "anchor_region",
+        "parent_value": "near_front",
+        "allowed_values_at_level": [
+          "fully_occluded",
+          "partially_occluded"
+        ],
+        "next_node_type": "motion_direction",
+        "allowed_children": [
+          "occluder_to_ego_path"
+        ]
+      },
+      {
+        "level": 11,
+        "node_type": "motion_direction",
+        "value": "occluder_to_ego_path",
+        "source": "geometric_constraint",
+        "confidence": 1.0,
+        "evidence": "derived: selected occluder -> ego path",
+        "parent_type": "visibility",
+        "parent_value": "fully_occluded",
+        "allowed_values_at_level": [
+          "occluder_to_ego_path"
+        ],
+        "next_node_type": "trigger_event",
+        "allowed_children": [
+          "occluded_actor_becomes_visible"
+        ]
+      },
+      {
+        "level": 12,
+        "node_type": "trigger_event",
+        "value": "occluded_actor_becomes_visible",
+        "source": "inferred",
+        "confidence": 0.96,
+        "evidence": "",
+        "parent_type": "motion_direction",
+        "parent_value": "occluder_to_ego_path",
+        "allowed_values_at_level": [
+          "occluded_actor_becomes_visible"
+        ],
+        "next_node_type": "ego_required_response",
+        "allowed_children": [
+          "brake_or_emergency_brake",
+          "steer"
+        ]
+      },
+      {
+        "level": 13,
+        "node_type": "ego_required_response",
+        "value": "brake_or_emergency_brake",
+        "source": "kinematic_pending",
+        "confidence": 0.68,
+        "evidence": "derived: response pending sampled TTC and stopping distance",
+        "parent_type": "trigger_event",
+        "parent_value": "occluded_actor_becomes_visible",
+        "allowed_values_at_level": [
+          "brake_or_emergency_brake",
+          "steer"
+        ],
+        "next_node_type": "risk_level",
+        "allowed_children": [
+          "aggressive",
+          "critical",
+          "mild",
+          "moderate"
+        ]
+      },
+      {
+        "level": 14,
+        "node_type": "risk_level",
+        "value": "aggressive",
+        "source": "explicit_semantic_modifier",
+        "confidence": 0.9,
+        "evidence": "abruptly",
+        "parent_type": "ego_required_response",
+        "parent_value": "brake_or_emergency_brake",
+        "allowed_values_at_level": [
+          "aggressive",
+          "critical",
+          "mild",
+          "moderate"
+        ],
+        "next_node_type": "executable_parameters",
+        "allowed_children": [
+          "actor_parameters",
+          "auxiliary_parameters",
+          "ego_parameters",
+          "risk_parameters",
+          "road_parameters"
+        ]
+      }
+    ],
+    "path_values": {
+      "road_topology": "straight_segment",
+      "ego_traffic_space": "curbside_zone",
+      "primary_actor_group": "vulnerable_road_user",
+      "primary_actor_type": "pedestrian",
+      "hazard_interaction": "occluded_emergence",
+      "auxiliary_entity": "parked_truck_occluder",
+      "source_region": "curbside",
+      "target_region": "ego_lane",
+      "anchor_region": "near_front",
+      "visibility": "fully_occluded",
+      "motion_direction": "occluder_to_ego_path",
+      "trigger_event": "occluded_actor_becomes_visible",
+      "ego_required_response": "brake_or_emergency_brake",
+      "risk_level": "aggressive"
+    },
+    "selected_tree": {
+      "node_type": "scene_root",
+      "value": "ego_centered_hazard_scene",
+      "tree_kind": "selected_root_to_leaf_path",
+      "children": [
+        {
+          "level": 1,
+          "node_type": "road_topology",
+          "value": "straight_segment",
+          "source": "normalized",
+          "confidence": 0.9,
+          "evidence": "",
+          "parent_type": "scene_root",
+          "parent_value": "ego_centered_hazard_scene",
+          "allowed_values_at_level": [
+            "intersection",
+            "merge_diverge",
+            "roundabout",
+            "straight_segment",
+            "work_zone"
+          ],
+          "next_node_type": "ego_traffic_space",
+          "allowed_children": [
+            "bidirectional_road",
+            "crosswalk_zone",
+            "curbside_zone",
+            "same_direction_multi_lane",
+            "single_lane"
+          ],
+          "children": [
+            {
+              "level": 2,
+              "node_type": "ego_traffic_space",
+              "value": "curbside_zone",
+              "source": "inferred",
+              "confidence": 0.84,
+              "evidence": "",
+              "parent_type": "road_topology",
+              "parent_value": "straight_segment",
+              "allowed_values_at_level": [
+                "bidirectional_road",
+                "crosswalk_zone",
+                "curbside_zone",
+                "same_direction_multi_lane",
+                "single_lane"
+              ],
+              "next_node_type": "primary_actor_group",
+              "allowed_children": [
+                "static_object",
+                "vehicle",
+                "vulnerable_road_user"
+              ],
+              "children": [
+                {
+                  "level": 3,
+                  "node_type": "primary_actor_group",
+                  "value": "vulnerable_road_user",
+                  "source": "normalized_to_nuplan",
+                  "confidence": 0.99,
+                  "evidence": "pedestrian",
+                  "parent_type": "ego_traffic_space",
+                  "parent_value": "curbside_zone",
+                  "allowed_values_at_level": [
+                    "static_object",
+                    "vehicle",
+                    "vulnerable_road_user"
+                  ],
+                  "next_node_type": "primary_actor_type",
+                  "allowed_children": [
+                    "cyclist",
+                    "pedestrian"
+                  ],
+                  "children": [
+                    {
+                      "level": 4,
+                      "node_type": "primary_actor_type",
+                      "value": "pedestrian",
+                      "source": "normalized_to_nuplan",
+                      "confidence": 0.99,
+                      "evidence": "pedestrian",
+                      "parent_type": "primary_actor_group",
+                      "parent_value": "vulnerable_road_user",
+                      "allowed_values_at_level": [
+                        "cyclist",
+                        "pedestrian"
+                      ],
+                      "next_node_type": "hazard_interaction",
+                      "allowed_children": [
+                        "enter_ego_lane",
+                        "longitudinal_occupation",
+                        "occluded_emergence",
+                        "path_crossing"
+                      ],
+                      "children": [
+                        {
+                          "level": 5,
+                          "node_type": "hazard_interaction",
+                          "value": "occluded_emergence",
+                          "source": "explicit",
+                          "confidence": 0.98,
+                          "evidence": "",
+                          "parent_type": "primary_actor_type",
+                          "parent_value": "pedestrian",
+                          "allowed_values_at_level": [
+                            "enter_ego_lane",
+                            "longitudinal_occupation",
+                            "occluded_emergence",
+                            "path_crossing"
+                          ],
+                          "next_node_type": "auxiliary_entity",
+                          "allowed_children": [
+                            "barrier_occluder",
+                            "building_edge_occluder",
+                            "bus_occluder",
+                            "generic_vehicle_occluder",
+                            "parked_car_occluder",
+                            "parked_truck_occluder",
+                            "van_occluder",
+                            "vegetation_occluder"
+                          ],
+                          "children": [
+                            {
+                              "level": 6,
+                              "node_type": "auxiliary_entity",
+                              "value": "parked_truck_occluder",
+                              "source": "normalized_explicit",
+                              "confidence": 0.98,
+                              "evidence": "parked truck",
+                              "parent_type": "hazard_interaction",
+                              "parent_value": "occluded_emergence",
+                              "allowed_values_at_level": [
+                                "barrier_occluder",
+                                "building_edge_occluder",
+                                "bus_occluder",
+                                "generic_vehicle_occluder",
+                                "parked_car_occluder",
+                                "parked_truck_occluder",
+                                "van_occluder",
+                                "vegetation_occluder"
+                              ],
+                              "next_node_type": "source_region",
+                              "allowed_children": [
+                                "curbside",
+                                "left_side",
+                                "right_side"
+                              ],
+                              "children": [
+                                {
+                                  "level": 7,
+                                  "node_type": "source_region",
+                                  "value": "curbside",
+                                  "source": "explicit",
+                                  "confidence": 0.9,
+                                  "evidence": "",
+                                  "parent_type": "auxiliary_entity",
+                                  "parent_value": "parked_truck_occluder",
+                                  "allowed_values_at_level": [
+                                    "curbside",
+                                    "left_side",
+                                    "right_side"
+                                  ],
+                                  "next_node_type": "target_region",
+                                  "allowed_children": [
+                                    "ego_lane",
+                                    "ego_path"
+                                  ],
+                                  "children": [
+                                    {
+                                      "level": 8,
+                                      "node_type": "target_region",
+                                      "value": "ego_lane",
+                                      "source": "explicit",
+                                      "confidence": 0.98,
+                                      "evidence": "ego lane",
+                                      "parent_type": "source_region",
+                                      "parent_value": "curbside",
+                                      "allowed_values_at_level": [
+                                        "ego_lane",
+                                        "ego_path"
+                                      ],
+                                      "next_node_type": "anchor_region",
+                                      "allowed_children": [
+                                        "crosswalk",
+                                        "far_front",
+                                        "intersection_center",
+                                        "lane_boundary",
+                                        "near_front",
+                                        "roundabout_entry"
+                                      ],
+                                      "children": [
+                                        {
+                                          "level": 9,
+                                          "node_type": "anchor_region",
+                                          "value": "near_front",
+                                          "source": "inferred",
+                                          "confidence": 0.72,
+                                          "evidence": "",
+                                          "parent_type": "target_region",
+                                          "parent_value": "ego_lane",
+                                          "allowed_values_at_level": [
+                                            "crosswalk",
+                                            "far_front",
+                                            "intersection_center",
+                                            "lane_boundary",
+                                            "near_front",
+                                            "roundabout_entry"
+                                          ],
+                                          "next_node_type": "visibility",
+                                          "allowed_children": [
+                                            "fully_occluded",
+                                            "partially_occluded"
+                                          ],
+                                          "children": [
+                                            {
+                                              "level": 10,
+                                              "node_type": "visibility",
+                                              "value": "fully_occluded",
+                                              "source": "explicit",
+                                              "confidence": 0.96,
+                                              "evidence": "hidden",
+                                              "parent_type": "anchor_region",
+                                              "parent_value": "near_front",
+                                              "allowed_values_at_level": [
+                                                "fully_occluded",
+                                                "partially_occluded"
+                                              ],
+                                              "next_node_type": "motion_direction",
+                                              "allowed_children": [
+                                                "occluder_to_ego_path"
+                                              ],
+                                              "children": [
+                                                {
+                                                  "level": 11,
+                                                  "node_type": "motion_direction",
+                                                  "value": "occluder_to_ego_path",
+                                                  "source": "geometric_constraint",
+                                                  "confidence": 1.0,
+                                                  "evidence": "derived: selected occluder -> ego path",
+                                                  "parent_type": "visibility",
+                                                  "parent_value": "fully_occluded",
+                                                  "allowed_values_at_level": [
+                                                    "occluder_to_ego_path"
+                                                  ],
+                                                  "next_node_type": "trigger_event",
+                                                  "allowed_children": [
+                                                    "occluded_actor_becomes_visible"
+                                                  ],
+                                                  "children": [
+                                                    {
+                                                      "level": 12,
+                                                      "node_type": "trigger_event",
+                                                      "value": "occluded_actor_becomes_visible",
+                                                      "source": "inferred",
+                                                      "confidence": 0.96,
+                                                      "evidence": "",
+                                                      "parent_type": "motion_direction",
+                                                      "parent_value": "occluder_to_ego_path",
+                                                      "allowed_values_at_level": [
+                                                        "occluded_actor_becomes_visible"
+                                                      ],
+                                                      "next_node_type": "ego_required_response",
+                                                      "allowed_children": [
+                                                        "brake_or_emergency_brake",
+                                                        "steer"
+                                                      ],
+                                                      "children": [
+                                                        {
+                                                          "level": 13,
+                                                          "node_type": "ego_required_response",
+                                                          "value": "brake_or_emergency_brake",
+                                                          "source": "kinematic_pending",
+                                                          "confidence": 0.68,
+                                                          "evidence": "derived: response pending sampled TTC and stopping distance",
+                                                          "parent_type": "trigger_event",
+                                                          "parent_value": "occluded_actor_becomes_visible",
+                                                          "allowed_values_at_level": [
+                                                            "brake_or_emergency_brake",
+                                                            "steer"
+                                                          ],
+                                                          "next_node_type": "risk_level",
+                                                          "allowed_children": [
+                                                            "aggressive",
+                                                            "critical",
+                                                            "mild",
+                                                            "moderate"
+                                                          ],
+                                                          "children": [
+                                                            {
+                                                              "level": 14,
+                                                              "node_type": "risk_level",
+                                                              "value": "aggressive",
+                                                              "source": "explicit_semantic_modifier",
+                                                              "confidence": 0.9,
+                                                              "evidence": "abruptly",
+                                                              "parent_type": "ego_required_response",
+                                                              "parent_value": "brake_or_emergency_brake",
+                                                              "allowed_values_at_level": [
+                                                                "aggressive",
+                                                                "critical",
+                                                                "mild",
+                                                                "moderate"
+                                                              ],
+                                                              "next_node_type": "executable_parameters",
+                                                              "allowed_children": [
+                                                                "actor_parameters",
+                                                                "auxiliary_parameters",
+                                                                "ego_parameters",
+                                                                "risk_parameters",
+                                                                "road_parameters"
+                                                              ],
+                                                              "children": [],
+                                                              "executable_parameter_groups": {
+                                                                "road_parameters": [
+                                                                  "lane_width_m",
+                                                                  "lane_count",
+                                                                  "road_curvature",
+                                                                  "conflict_point_xy"
+                                                                ],
+                                                                "ego_parameters": [
+                                                                  "ego_speed_mps",
+                                                                  "ego_acceleration_mps2",
+                                                                  "ego_distance_to_conflict_m"
+                                                                ],
+                                                                "actor_parameters": [
+                                                                  "actor_speed_mps",
+                                                                  "actor_acceleration_mps2",
+                                                                  "actor_initial_position",
+                                                                  "actor_heading",
+                                                                  "actor_start_time_s"
+                                                                ],
+                                                                "auxiliary_parameters": [
+                                                                  "occluder_position",
+                                                                  "occluder_length_m",
+                                                                  "occluder_width_m",
+                                                                  "occluder_lateral_offset_m"
+                                                                ],
+                                                                "risk_parameters": [
+                                                                  "reveal_distance_m",
+                                                                  "initial_gap_m",
+                                                                  "time_to_collision_s",
+                                                                  "minimum_clearance_m",
+                                                                  "braking_deceleration_mps2"
+                                                                ]
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "tree": {
+      "node_type": "scene_root",
+      "value": "ego_centered_hazard_scene",
+      "tree_kind": "selected_root_to_leaf_path",
+      "children": [
+        {
+          "level": 1,
+          "node_type": "road_topology",
+          "value": "straight_segment",
+          "source": "normalized",
+          "confidence": 0.9,
+          "evidence": "",
+          "parent_type": "scene_root",
+          "parent_value": "ego_centered_hazard_scene",
+          "allowed_values_at_level": [
+            "intersection",
+            "merge_diverge",
+            "roundabout",
+            "straight_segment",
+            "work_zone"
+          ],
+          "next_node_type": "ego_traffic_space",
+          "allowed_children": [
+            "bidirectional_road",
+            "crosswalk_zone",
+            "curbside_zone",
+            "same_direction_multi_lane",
+            "single_lane"
+          ],
+          "children": [
+            {
+              "level": 2,
+              "node_type": "ego_traffic_space",
+              "value": "curbside_zone",
+              "source": "inferred",
+              "confidence": 0.84,
+              "evidence": "",
+              "parent_type": "road_topology",
+              "parent_value": "straight_segment",
+              "allowed_values_at_level": [
+                "bidirectional_road",
+                "crosswalk_zone",
+                "curbside_zone",
+                "same_direction_multi_lane",
+                "single_lane"
+              ],
+              "next_node_type": "primary_actor_group",
+              "allowed_children": [
+                "static_object",
+                "vehicle",
+                "vulnerable_road_user"
+              ],
+              "children": [
+                {
+                  "level": 3,
+                  "node_type": "primary_actor_group",
+                  "value": "vulnerable_road_user",
+                  "source": "normalized_to_nuplan",
+                  "confidence": 0.99,
+                  "evidence": "pedestrian",
+                  "parent_type": "ego_traffic_space",
+                  "parent_value": "curbside_zone",
+                  "allowed_values_at_level": [
+                    "static_object",
+                    "vehicle",
+                    "vulnerable_road_user"
+                  ],
+                  "next_node_type": "primary_actor_type",
+                  "allowed_children": [
+                    "cyclist",
+                    "pedestrian"
+                  ],
+                  "children": [
+                    {
+                      "level": 4,
+                      "node_type": "primary_actor_type",
+                      "value": "pedestrian",
+                      "source": "normalized_to_nuplan",
+                      "confidence": 0.99,
+                      "evidence": "pedestrian",
+                      "parent_type": "primary_actor_group",
+                      "parent_value": "vulnerable_road_user",
+                      "allowed_values_at_level": [
+                        "cyclist",
+                        "pedestrian"
+                      ],
+                      "next_node_type": "hazard_interaction",
+                      "allowed_children": [
+                        "enter_ego_lane",
+                        "longitudinal_occupation",
+                        "occluded_emergence",
+                        "path_crossing"
+                      ],
+                      "children": [
+                        {
+                          "level": 5,
+                          "node_type": "hazard_interaction",
+                          "value": "occluded_emergence",
+                          "source": "explicit",
+                          "confidence": 0.98,
+                          "evidence": "",
+                          "parent_type": "primary_actor_type",
+                          "parent_value": "pedestrian",
+                          "allowed_values_at_level": [
+                            "enter_ego_lane",
+                            "longitudinal_occupation",
+                            "occluded_emergence",
+                            "path_crossing"
+                          ],
+                          "next_node_type": "auxiliary_entity",
+                          "allowed_children": [
+                            "barrier_occluder",
+                            "building_edge_occluder",
+                            "bus_occluder",
+                            "generic_vehicle_occluder",
+                            "parked_car_occluder",
+                            "parked_truck_occluder",
+                            "van_occluder",
+                            "vegetation_occluder"
+                          ],
+                          "children": [
+                            {
+                              "level": 6,
+                              "node_type": "auxiliary_entity",
+                              "value": "parked_truck_occluder",
+                              "source": "normalized_explicit",
+                              "confidence": 0.98,
+                              "evidence": "parked truck",
+                              "parent_type": "hazard_interaction",
+                              "parent_value": "occluded_emergence",
+                              "allowed_values_at_level": [
+                                "barrier_occluder",
+                                "building_edge_occluder",
+                                "bus_occluder",
+                                "generic_vehicle_occluder",
+                                "parked_car_occluder",
+                                "parked_truck_occluder",
+                                "van_occluder",
+                                "vegetation_occluder"
+                              ],
+                              "next_node_type": "source_region",
+                              "allowed_children": [
+                                "curbside",
+                                "left_side",
+                                "right_side"
+                              ],
+                              "children": [
+                                {
+                                  "level": 7,
+                                  "node_type": "source_region",
+                                  "value": "curbside",
+                                  "source": "explicit",
+                                  "confidence": 0.9,
+                                  "evidence": "",
+                                  "parent_type": "auxiliary_entity",
+                                  "parent_value": "parked_truck_occluder",
+                                  "allowed_values_at_level": [
+                                    "curbside",
+                                    "left_side",
+                                    "right_side"
+                                  ],
+                                  "next_node_type": "target_region",
+                                  "allowed_children": [
+                                    "ego_lane",
+                                    "ego_path"
+                                  ],
+                                  "children": [
+                                    {
+                                      "level": 8,
+                                      "node_type": "target_region",
+                                      "value": "ego_lane",
+                                      "source": "explicit",
+                                      "confidence": 0.98,
+                                      "evidence": "ego lane",
+                                      "parent_type": "source_region",
+                                      "parent_value": "curbside",
+                                      "allowed_values_at_level": [
+                                        "ego_lane",
+                                        "ego_path"
+                                      ],
+                                      "next_node_type": "anchor_region",
+                                      "allowed_children": [
+                                        "crosswalk",
+                                        "far_front",
+                                        "intersection_center",
+                                        "lane_boundary",
+                                        "near_front",
+                                        "roundabout_entry"
+                                      ],
+                                      "children": [
+                                        {
+                                          "level": 9,
+                                          "node_type": "anchor_region",
+                                          "value": "near_front",
+                                          "source": "inferred",
+                                          "confidence": 0.72,
+                                          "evidence": "",
+                                          "parent_type": "target_region",
+                                          "parent_value": "ego_lane",
+                                          "allowed_values_at_level": [
+                                            "crosswalk",
+                                            "far_front",
+                                            "intersection_center",
+                                            "lane_boundary",
+                                            "near_front",
+                                            "roundabout_entry"
+                                          ],
+                                          "next_node_type": "visibility",
+                                          "allowed_children": [
+                                            "fully_occluded",
+                                            "partially_occluded"
+                                          ],
+                                          "children": [
+                                            {
+                                              "level": 10,
+                                              "node_type": "visibility",
+                                              "value": "fully_occluded",
+                                              "source": "explicit",
+                                              "confidence": 0.96,
+                                              "evidence": "hidden",
+                                              "parent_type": "anchor_region",
+                                              "parent_value": "near_front",
+                                              "allowed_values_at_level": [
+                                                "fully_occluded",
+                                                "partially_occluded"
+                                              ],
+                                              "next_node_type": "motion_direction",
+                                              "allowed_children": [
+                                                "occluder_to_ego_path"
+                                              ],
+                                              "children": [
+                                                {
+                                                  "level": 11,
+                                                  "node_type": "motion_direction",
+                                                  "value": "occluder_to_ego_path",
+                                                  "source": "geometric_constraint",
+                                                  "confidence": 1.0,
+                                                  "evidence": "derived: selected occluder -> ego path",
+                                                  "parent_type": "visibility",
+                                                  "parent_value": "fully_occluded",
+                                                  "allowed_values_at_level": [
+                                                    "occluder_to_ego_path"
+                                                  ],
+                                                  "next_node_type": "trigger_event",
+                                                  "allowed_children": [
+                                                    "occluded_actor_becomes_visible"
+                                                  ],
+                                                  "children": [
+                                                    {
+                                                      "level": 12,
+                                                      "node_type": "trigger_event",
+                                                      "value": "occluded_actor_becomes_visible",
+                                                      "source": "inferred",
+                                                      "confidence": 0.96,
+                                                      "evidence": "",
+                                                      "parent_type": "motion_direction",
+                                                      "parent_value": "occluder_to_ego_path",
+                                                      "allowed_values_at_level": [
+                                                        "occluded_actor_becomes_visible"
+                                                      ],
+                                                      "next_node_type": "ego_required_response",
+                                                      "allowed_children": [
+                                                        "brake_or_emergency_brake",
+                                                        "steer"
+                                                      ],
+                                                      "children": [
+                                                        {
+                                                          "level": 13,
+                                                          "node_type": "ego_required_response",
+                                                          "value": "brake_or_emergency_brake",
+                                                          "source": "kinematic_pending",
+                                                          "confidence": 0.68,
+                                                          "evidence": "derived: response pending sampled TTC and stopping distance",
+                                                          "parent_type": "trigger_event",
+                                                          "parent_value": "occluded_actor_becomes_visible",
+                                                          "allowed_values_at_level": [
+                                                            "brake_or_emergency_brake",
+                                                            "steer"
+                                                          ],
+                                                          "next_node_type": "risk_level",
+                                                          "allowed_children": [
+                                                            "aggressive",
+                                                            "critical",
+                                                            "mild",
+                                                            "moderate"
+                                                          ],
+                                                          "children": [
+                                                            {
+                                                              "level": 14,
+                                                              "node_type": "risk_level",
+                                                              "value": "aggressive",
+                                                              "source": "explicit_semantic_modifier",
+                                                              "confidence": 0.9,
+                                                              "evidence": "abruptly",
+                                                              "parent_type": "ego_required_response",
+                                                              "parent_value": "brake_or_emergency_brake",
+                                                              "allowed_values_at_level": [
+                                                                "aggressive",
+                                                                "critical",
+                                                                "mild",
+                                                                "moderate"
+                                                              ],
+                                                              "next_node_type": "executable_parameters",
+                                                              "allowed_children": [
+                                                                "actor_parameters",
+                                                                "auxiliary_parameters",
+                                                                "ego_parameters",
+                                                                "risk_parameters",
+                                                                "road_parameters"
+                                                              ],
+                                                              "children": [],
+                                                              "executable_parameter_groups": {
+                                                                "road_parameters": [
+                                                                  "lane_width_m",
+                                                                  "lane_count",
+                                                                  "road_curvature",
+                                                                  "conflict_point_xy"
+                                                                ],
+                                                                "ego_parameters": [
+                                                                  "ego_speed_mps",
+                                                                  "ego_acceleration_mps2",
+                                                                  "ego_distance_to_conflict_m"
+                                                                ],
+                                                                "actor_parameters": [
+                                                                  "actor_speed_mps",
+                                                                  "actor_acceleration_mps2",
+                                                                  "actor_initial_position",
+                                                                  "actor_heading",
+                                                                  "actor_start_time_s"
+                                                                ],
+                                                                "auxiliary_parameters": [
+                                                                  "occluder_position",
+                                                                  "occluder_length_m",
+                                                                  "occluder_width_m",
+                                                                  "occluder_lateral_offset_m"
+                                                                ],
+                                                                "risk_parameters": [
+                                                                  "reveal_distance_m",
+                                                                  "initial_gap_m",
+                                                                  "time_to_collision_s",
+                                                                  "minimum_clearance_m",
+                                                                  "braking_deceleration_mps2"
+                                                                ]
+                                                              }
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "tree_kind": "selected_root_to_leaf_path",
+    "branch_options": {
+      "road_topology": [
+        "bidirectional_road",
+        "crosswalk_zone",
+        "curbside_zone",
+        "same_direction_multi_lane",
+        "single_lane"
+      ],
+      "ego_traffic_space": [
+        "static_object",
+        "vehicle",
+        "vulnerable_road_user"
+      ],
+      "primary_actor_group": [
+        "cyclist",
+        "pedestrian"
+      ],
+      "primary_actor_type": [
+        "enter_ego_lane",
+        "longitudinal_occupation",
+        "occluded_emergence",
+        "path_crossing"
+      ],
+      "hazard_interaction": [
+        "barrier_occluder",
+        "building_edge_occluder",
+        "bus_occluder",
+        "generic_vehicle_occluder",
+        "parked_car_occluder",
+        "parked_truck_occluder",
+        "van_occluder",
+        "vegetation_occluder"
+      ],
+      "auxiliary_entity": [
+        "curbside",
+        "left_side",
+        "right_side"
+      ],
+      "source_region": [
+        "ego_lane",
+        "ego_path"
+      ],
+      "target_region": [
+        "crosswalk",
+        "far_front",
+        "intersection_center",
+        "lane_boundary",
+        "near_front",
+        "roundabout_entry"
+      ],
+      "anchor_region": [
+        "fully_occluded",
+        "partially_occluded"
+      ],
+      "visibility": [
+        "occluder_to_ego_path"
+      ],
+      "motion_direction": [
+        "occluded_actor_becomes_visible"
+      ],
+      "trigger_event": [
+        "brake_or_emergency_brake",
+        "steer"
+      ],
+      "ego_required_response": [
+        "aggressive",
+        "critical",
+        "mild",
+        "moderate"
+      ],
+      "risk_level": [
+        "actor_parameters",
+        "auxiliary_parameters",
+        "ego_parameters",
+        "risk_parameters",
+        "road_parameters"
+      ]
+    },
+    "attributes": {
+      "language_actor_detail": "adult_or_unspecified",
+      "language_actor_text": "pedestrian",
+      "absolute_direction_hint": "derived_after_occluder_side_sampling",
+      "response_status": "provisional_until_kinematic_check"
+    },
+    "nuplan_projection": {
+      "actor_category": "pedestrian",
+      "tracked_object_type": "TrackedObjectType.PEDESTRIAN",
+      "sledge_collection": "pedestrians",
+      "language_actor_detail": "adult_or_unspecified",
+      "language_actor_text": "pedestrian",
+      "occluder_category": "vehicle",
+      "occluder_sledge_collection": "vehicles",
+      "coordinate_frame": "ego_local",
+      "compatible": true,
+      "warnings": []
+    },
+    "executable_parameter_groups": {
+      "road_parameters": [
+        "lane_width_m",
+        "lane_count",
+        "road_curvature",
+        "conflict_point_xy"
+      ],
+      "ego_parameters": [
+        "ego_speed_mps",
+        "ego_acceleration_mps2",
+        "ego_distance_to_conflict_m"
+      ],
+      "actor_parameters": [
+        "actor_speed_mps",
+        "actor_acceleration_mps2",
+        "actor_initial_position",
+        "actor_heading",
+        "actor_start_time_s"
+      ],
+      "auxiliary_parameters": [
+        "occluder_position",
+        "occluder_length_m",
+        "occluder_width_m",
+        "occluder_lateral_offset_m"
+      ],
+      "risk_parameters": [
+        "reveal_distance_m",
+        "initial_gap_m",
+        "time_to_collision_s",
+        "minimum_clearance_m",
+        "braking_deceleration_mps2"
+      ]
+    },
+    "valid": true,
+    "issues": []
+  },
+  "nuplan_layer": {
+    "schema_version": "sledge_vector_raw_projection_v1",
+    "coordinate_frame": "ego_local",
+    "actor": {
+      "semantic_detail": "adult_or_unspecified",
+      "nuplan_category": "pedestrian",
+      "tracked_object_type": "TrackedObjectType.PEDESTRIAN",
+      "sledge_collection": "pedestrians",
+      "state_mapping": {
+        "position": "parameter_layer.completed.actor_initial_position.value",
+        "heading": "parameter_layer.completed.actor_heading.value",
+        "speed": "parameter_layer.completed.actor_speed_mps.value",
+        "acceleration": "parameter_layer.completed.actor_acceleration_mps2.value"
+      }
+    },
+    "occluder": {
+      "semantic_type": "parked_truck_occluder",
+      "nuplan_category": "vehicle",
+      "sledge_collection": "vehicles",
+      "state_mapping": {
+        "position": "parameter_layer.completed.occluder_position.value",
+        "length": "parameter_layer.completed.occluder_length_m.value",
+        "width": "parameter_layer.completed.occluder_width_m.value"
+      }
+    },
+    "compatible": true,
+    "warnings": []
+  },
+  "readiness": {
+    "semantic_understanding": "passed",
+    "hierarchical_path": "passed",
+    "nuplan_category_projection": "passed",
+    "parameter_template": "complete",
+    "occluded_pedestrian_contract": "passed",
+    "occluded_pedestrian_contract_issues": [],
+    "kinematic_consistency": "pending_concrete_sampling",
+    "scene_template_ready": true,
+    "sampled_scene_ready": false
+  },
+  "scene_construction": {
+    "mode": "edit_existing",
+    "reason": "no_explicit_global_road_structure",
+    "explicit_global_constraints": {},
+    "local_hazard_constraints": {
+      "primary_actor_type": "pedestrian",
+      "hazard_interaction": "occluded_emergence",
+      "auxiliary_entity": "parked_truck_occluder",
+      "source_region": "curbside",
+      "target_region": "ego_lane",
+      "anchor_region": "near_front",
+      "visibility": "fully_occluded",
+      "motion_direction": "occluder_to_ego_path",
+      "trigger_event": "occluded_actor_becomes_visible",
+      "ego_required_response": "brake_or_emergency_brake",
+      "risk_level": "aggressive"
+    },
+    "preserve_from_b0": [
+      "road_geometry",
+      "lane_geometry"
+    ],
+    "hard_preserve_from_b0": [
+      "road_geometry",
+      "lane_geometry",
+      "road_topology"
+    ],
+    "semantic_edit_controls": [
+      "ego_state",
+      "primary_pedestrian",
+      "occluder"
+    ],
+    "elastic_context": [
+      "background_vehicles",
+      "background_pedestrians",
+      "background_static_objects"
+    ],
+    "context_edit_policy": {
+      "mode": "move_then_delete_local_blockers",
+      "preserve_unrelated_context_when_feasible": true,
+      "allow_reposition": true,
+      "allow_velocity_adjustment": false,
+      "allow_removal": true,
+      "removal_scope": "local_occluder_reserved_region_only",
+      "traffic_lights_removable": false,
+      "hazard_constraints_remain_hard": true
+    },
+    "sample_from_template": [
+      "ego_speed_mps",
+      "ego_acceleration_mps2",
+      "ego_distance_to_conflict_m",
+      "occluder_side",
+      "actor_speed_mps",
+      "actor_acceleration_mps2",
+      "actor_start_time_s",
+      "occluder_length_m",
+      "occluder_width_m",
+      "occluder_lateral_offset_m",
+      "reveal_distance_m",
+      "minimum_clearance_m",
+      "braking_deceleration_mps2"
+    ],
+    "derive_from_scene": [
+      "conflict_point_xy",
+      "occluder_position",
+      "actor_initial_position",
+      "actor_heading",
+      "initial_gap_m",
+      "time_to_collision_s"
+    ],
+    "trigger_evidence": [],
+    "source_scene_usage": "road_fixed_elastic_semantic_base_scene",
+    "policy": "explicit_global_road_structure_routes_to_synthesis_v3_move_then_delete"
+  }
+}

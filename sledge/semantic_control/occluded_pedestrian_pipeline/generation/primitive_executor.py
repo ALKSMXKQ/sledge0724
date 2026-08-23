@@ -4,9 +4,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from sledge.autoencoder.preprocessing.features.sledge_vector_feature import SledgeVectorRaw
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_clearance_ops import (
+    HazardClearancePrimitiveOps,
+)
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import HazardSemanticSpec
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.primitive_compiler import PrimitiveOp
-from sledge.semantic_control.occluded_pedestrian_pipeline.generation.primitive_ops import PrimitiveOps
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.edit_models import PromptSpec, SceneEditResult, SceneEditROI
 
 
@@ -38,12 +40,14 @@ class PrimitiveExecutor:
     """
     Execute primitive ops on SledgeVectorRaw.
 
-    This is the phase-2 bridge:
-        HazardSemanticSpec -> primitive ops -> edited SledgeVectorRaw.
+    The executor uses ``HazardClearancePrimitiveOps``. It inherits every
+    existing primitive unchanged and overrides only occluded-pedestrian
+    placement so unrelated background entities follow a move-then-delete
+    policy instead of vetoing a hard-valid occluder candidate.
     """
 
     def __init__(self) -> None:
-        self.ops = PrimitiveOps()
+        self.ops = HazardClearancePrimitiveOps()
 
     def execute(
         self,
@@ -176,4 +180,3 @@ def _direction_to_legacy_side(direction: str) -> str:
     if direction in {"right_to_left", "right_merge"}:
         return "right"
     return "auto"
-

@@ -27,7 +27,9 @@ HazardSemanticSpec
 可执行操作序列
   ↓ 原 compositional editor / executor
 B1 参数化危险场景
-  ↓ 严格几何语义检查 + ROI 保护
+  ↓ B0 不变量检查：只能新增 1 个行人和 1 个遮挡物
+B2 diffusion input
+  ↓ half-denoise + 全场景语义向量硬约束
 B2 half-denoise 扩散重绘
   ↓ 同一套索引无关语义指标再次检查
 通过样本的 scenario cache
@@ -37,9 +39,9 @@ B2 half-denoise 扩散重绘
 
 这里的遮挡场景生成沿用项目历史版本中已经验证过的 compositional editor：行人横穿位置、速度和方向由模板控制；遮挡物沿 ego 到行人的视线放置，并包含 frame-0 时间偏移补偿、与 ego/行人/其他 agent 的碰撞规避。新代码主要增加 EventFrame 严格适配、统一编排、实验矩阵和 B0/B1/B2 同口径评估，没有另造一套遮挡几何方法。
 
-由于当前 RVAE 在编码/解码新插入的小行人时可能直接丢掉该实体，并且低噪声解码仍可能局部扭曲道路连通性，B2 采用“背景 half-denoise + 结构/语义保护向量合成”：道路骨架、受控行人、遮挡物以及交互所需 ego 速度从 B1 精确合成回解码向量，其他交通参与者仍由扩散模型生成，然后再做严格 B2 检查。这不是用 B1 替代扩散输出；锁定的是可驾驶拓扑和自然语言明确指定的控制变量。
+由于当前 RVAE 在编码/解码新插入的小行人时可能直接丢掉该实体，低噪声解码也会移动原有交通参与者或扭曲道路，严格模式会先让扩散模型产生候选，再把经过验证的 B1 语义向量全部合成回输出。也就是说，当前可验收的 B2 `sledge_vector.gz` 在语义层面必须与 diffusion input 完全一致；扩散候选不会被允许新增、删除、移动或加速任何实体。这个策略牺牲了 B2 向量层面的背景多样性，但能给“只增加遮挡物和行人”提供硬保证。后续如果需要扩散多样性，应另开宽松实验分支，不能混入这批严格验收数据。
 
-可变长度 raw cache 在编辑前会获得临时插入槽，保存前会删除未激活槽并重映射索引。这样既能处理原数据中空的车辆/行人数组，也不会因 SLEDGE 预处理忽略 mask 而在原点产生伪实体。
+可变长度 raw cache 在编辑前会把所有原始数据行视为已占用实体，并只在末尾增加临时插入槽。这样可以兼容“states 有数据但原始 mask 全 False”的历史 cache，避免旧逻辑覆盖第一行并在压缩时删除全部原始对象。保存前只删除新建但未激活的槽并重映射索引。
 
 ## 3. 目录说明
 
@@ -97,7 +99,11 @@ $SLEDGE_PYTHON -m sledge.semantic_control.occluded_pedestrian_pipeline.cli refin
 $SLEDGE_PYTHON -m sledge.semantic_control.occluded_pedestrian_pipeline.cli batch \
   --input-root ../exp/caches/autoencoder_cache \
   --output-root ../exp/occluded_pedestrian_runs/pilot100_nuplan_types_v1 \
-  --profile pilot100
+  --profile pilot100 \
+  --target-accepted 100 \
+  --candidate-pool-size 800 \
+  --control-mode controlled \
+  --accept-defaults
 
 $SLEDGE_PYTHON -m sledge.semantic_control.occluded_pedestrian_pipeline.cli export-b1 \
   --run-root ../exp/occluded_pedestrian_runs/pilot100_nuplan_types_v1 \
@@ -144,6 +150,9 @@ $SLEDGE_PYTHON -m sledge.semantic_control.occluded_pedestrian_pipeline.cli compa
 ├── b1_simulation_cache/log/sudden_pedestrian_crossing/<sample_id>/
 │   ├── sledge_vector.gz       # 内嵌模拟器对象类型
 │   └── scenario_label.json
+├── b2_diffusion_input_cache/<sample_id>/
+│   ├── sledge_vector.gz       # 进入扩散前的明确检查点
+│   └── scenario_label.json
 ├── b2_diffusion_reports/...
 ├── b2_generated_cache/...
 ├── stage_vector_caches/       # B0/B1 的仿真接口适配缓存
@@ -176,8 +185,9 @@ $SLEDGE_PYTHON -m sledge.semantic_control.occluded_pedestrian_pipeline.cli compa
 ## 7. 阶段验收标准
 
 - 语言阶段：EventFrame 和映射 spec 校验通过；遮挡物、方向、速度没有被错误填入 ego 参数。
-- B1：行人和遮挡物存在；遮挡物位于视线之间并挡住 LOS；方向和速度匹配；行人能进入 ego 车道；初始无重叠；遮挡物完整包围盒到车道边界至少保留 `1.50 m` 动态扫掠余量。行人路侧起始带与 ego 速度会共同求解，以保持遮挡和交互到达时序，而不是把危险事件简单移远。
-- B2：解码后不依赖原 slot index 重新搜索参与者，重复上述检查；道路骨架精确锁定，并用双向均值、P95 距离和点数比复核；没有合格 B2 输出的样本计入失败分母。
+- B1：先检查 B0 的道路、交通灯和 ego 完全不变，再逐行检查所有原始车辆、行人和静态物体仍存在且数值不变；只允许新增 1 个目标行人和 1 个遮挡物。之后再检查 LOS 遮挡、方向、速度、到达时序、初始无碰撞和 `1.50 m` ego 动态扫掠余量。ego 速度不再为了凑 TTC 被修改；不合适的原场景会被拒绝并自动换底图。
+- diffusion input：B1 保存前先检查固定容量（车辆 50、行人 20、静态物体 30）足以容纳 B0 和两个新增实体；固定容量转换后再做同一套逐实体检查。若容量截断会挤掉任何 B0 实体，该原场景会直接被拒绝并换底图。
+- B2：解码候选完成后，将全部已验证语义元素硬约束为 diffusion input，并做逐元素 shape、mask 和数值一致性检查；只有精确一致且遮挡语义仍全通过的输出才进入 `b2_generated_cache`。
 - 仿真：B0/B1/B2 使用同一配置分别运行；速度不高于 0.1 m/s 的停放车辆保持静止且保留 `VEHICLE` 类型，避免 IDM 将遮挡车错误吸附到车道并加速。统计碰撞、TTC、可行驶区域、进度和舒适性，同时按 track token 区分“目标行人/遮挡物/其他车辆”的真实接触对象。限速指标因要求生成地图上唯一 lane 匹配而不适用，本链路只禁用该一项。
 
 服务器工作盘为 NFS 时，nuPlan 的 `aiofiles` 可能在 NuBoard/metric 文件上阻塞。统一入口会在 `/tmp` 完成仿真后自动复制到 `<output-root>/stage_simulations/<stage>/simulation`；并且会核对实际指标场景数，子进程返回 0 但结果不完整时仍判为失败。

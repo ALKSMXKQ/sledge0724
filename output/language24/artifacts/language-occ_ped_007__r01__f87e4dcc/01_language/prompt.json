@@ -1,0 +1,11 @@
+{
+  "prompt": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": "right",
+    "direction": null,
+    "pedestrian_speed_mps": 0.8,
+    "risk_level": "mild",
+    "seed": 30023722
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "prompt": "A child suddenly emerges from behind a parked truck into the ego lane.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": null,
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": "aggressive",
+    "seed": 3678991182
+  }
+}

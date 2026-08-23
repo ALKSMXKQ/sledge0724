@@ -116,5 +116,13 @@ def normalize_spec(spec: HazardSemanticSpec, overwrite_risk: bool = False) -> Ha
         if out.actor_layer.secondary_actor is None:
             out.actor_layer.secondary_actor = out.object_layer.occlusion.occluder_type
 
-    return out
+        # The focused occluded-pedestrian pipeline is a conservative additive
+        # editor. Never reuse/replace a source actor and never synthesize or
+        # adjust the source road just to make a requested case feasible.
+        out.actor_layer.allow_actor_insertion = True
+        out.actor_layer.prefer_existing_actor = False
+        out.actor_layer.allow_actor_replacement = False
+        out.road_layer.allow_lane_generation = False
+        out.road_layer.generated_road_layout = "none"
 
+    return out

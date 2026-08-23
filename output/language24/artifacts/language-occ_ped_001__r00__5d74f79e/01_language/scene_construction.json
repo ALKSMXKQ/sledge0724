@@ -1,0 +1,73 @@
+{
+  "mode": "edit_existing",
+  "reason": "no_explicit_global_road_structure",
+  "explicit_global_constraints": {},
+  "local_hazard_constraints": {
+    "primary_actor_type": "pedestrian",
+    "hazard_interaction": "occluded_emergence",
+    "auxiliary_entity": "parked_truck_occluder",
+    "source_region": "curbside",
+    "target_region": "ego_lane",
+    "anchor_region": "near_front",
+    "visibility": "fully_occluded",
+    "motion_direction": "occluder_to_ego_path",
+    "trigger_event": "occluded_actor_becomes_visible",
+    "ego_required_response": "brake_or_emergency_brake",
+    "risk_level": "aggressive"
+  },
+  "preserve_from_b0": [
+    "road_geometry",
+    "lane_geometry"
+  ],
+  "hard_preserve_from_b0": [
+    "road_geometry",
+    "lane_geometry",
+    "road_topology"
+  ],
+  "semantic_edit_controls": [
+    "ego_state",
+    "primary_pedestrian",
+    "occluder"
+  ],
+  "elastic_context": [
+    "background_vehicles",
+    "background_pedestrians",
+    "background_static_objects"
+  ],
+  "context_edit_policy": {
+    "mode": "move_then_delete_local_blockers",
+    "preserve_unrelated_context_when_feasible": true,
+    "allow_reposition": true,
+    "allow_velocity_adjustment": false,
+    "allow_removal": true,
+    "removal_scope": "local_occluder_reserved_region_only",
+    "traffic_lights_removable": false,
+    "hazard_constraints_remain_hard": true
+  },
+  "sample_from_template": [
+    "ego_speed_mps",
+    "ego_acceleration_mps2",
+    "ego_distance_to_conflict_m",
+    "occluder_side",
+    "actor_speed_mps",
+    "actor_acceleration_mps2",
+    "actor_start_time_s",
+    "occluder_length_m",
+    "occluder_width_m",
+    "occluder_lateral_offset_m",
+    "reveal_distance_m",
+    "minimum_clearance_m",
+    "braking_deceleration_mps2"
+  ],
+  "derive_from_scene": [
+    "conflict_point_xy",
+    "occluder_position",
+    "actor_initial_position",
+    "actor_heading",
+    "initial_gap_m",
+    "time_to_collision_s"
+  ],
+  "trigger_evidence": [],
+  "source_scene_usage": "road_fixed_elastic_semantic_base_scene",
+  "policy": "explicit_global_road_structure_routes_to_synthesis_v3_move_then_delete"
+}

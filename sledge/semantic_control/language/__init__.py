@@ -46,6 +46,19 @@ from sledge.semantic_control.language.direct_template_baseline import (
     DirectTemplateParser,
     validate_direct_template_spec,
 )
+from sledge.semantic_control.language.hierarchical_ontology import (
+    HierarchicalScenePath,
+    HierarchicalSceneResolver,
+    HierarchyNode,
+)
+from sledge.semantic_control.language.hierarchical_pipeline import (
+    DefaultLanguageUnderstandingPipeline,
+    HierarchicalEventFramePipeline,
+    HierarchicalParameterFiller,
+    HierarchicalPipelineResult,
+    attach_hierarchy,
+    validate_hierarchical_spec,
+)
 
 
 __all__ = [
@@ -77,4 +90,13 @@ __all__ = [
     "DirectTemplateMapper",
     "DirectTemplateBaseline",
     "validate_direct_template_spec",
+    "HierarchyNode",
+    "HierarchicalScenePath",
+    "HierarchicalSceneResolver",
+    "HierarchicalParameterFiller",
+    "HierarchicalPipelineResult",
+    "HierarchicalEventFramePipeline",
+    "DefaultLanguageUnderstandingPipeline",
+    "attach_hierarchy",
+    "validate_hierarchical_spec",
 ]

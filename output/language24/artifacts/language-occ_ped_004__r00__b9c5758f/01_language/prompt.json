@@ -1,0 +1,11 @@
+{
+  "prompt": "A person becomes visible from behind a roadside van and crosses into the ego lane at 1.6 m/s.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": null,
+    "direction": null,
+    "pedestrian_speed_mps": 1.6,
+    "risk_level": null,
+    "seed": 1887029795
+  }
+}

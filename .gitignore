@@ -17,4 +17,4 @@
 
 # Custom
 *.ckpt
-*.zip
+*.zipdeployment/sledge_rvae/artifacts/

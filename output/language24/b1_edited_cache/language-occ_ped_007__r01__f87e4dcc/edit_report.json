@@ -1,0 +1,97 @@
+{
+  "prompt_spec": {
+    "raw_prompt": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s.",
+    "normalized_prompt": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s.",
+    "scenario_type": "Occluded-Pedestrian",
+    "city": null,
+    "map_id": null,
+    "occluder_type": "vehicle",
+    "side": "right",
+    "moderate_traffic": false,
+    "yielding": false,
+    "blind_spot": false,
+    "pedestrian_emerge": true,
+    "use_existing_occluder_first": false,
+    "insert_occluder_if_missing": true,
+    "severity_level": "mild",
+    "primary_actor_type": "pedestrian",
+    "crossing_style": "pedestrian_crossing",
+    "pedestrian_speed": 0.8,
+    "vehicle_speed": 8.0,
+    "target_speed_mps": 0.8,
+    "ttc_min_s": 3.0,
+    "ttc_max_s": 4.2,
+    "conflict_point_x_m": 21.5,
+    "conflict_point_y_m": 0.0,
+    "target_gap_min_m": 15.623419780060846,
+    "target_gap_max_m": 19.623419780060846,
+    "lead_distance_min_m": 15.623419780060846,
+    "lead_distance_max_m": 19.623419780060846,
+    "lateral_speed_min_mps": 0.8,
+    "lateral_speed_max_mps": 2.4,
+    "relative_speed_min_mps": 1.0,
+    "relative_speed_max_mps": 3.0,
+    "target_decel_min_mps2": 5.544970428934816,
+    "target_decel_max_mps2": 7.544970428934816,
+    "spawn_from_roadside": true,
+    "keep_scene_minimal": true,
+    "allow_actor_insertion": true,
+    "prefer_existing_actor": false,
+    "matched_rules": [
+      "semantic_signature:straight/ego_path/pedestrian/crossing_actor/lateral_conflict/right_to_left/occluded/mild/near_miss"
+    ],
+    "debug": {
+      "hazard_spec_id": "occluded_pedestrian_9420fb481cfe"
+    }
+  },
+  "occluder_source": "vehicle",
+  "occluder_index": 5,
+  "occluder_elem_name": "vehicles",
+  "static_obstacle_index": -1,
+  "pedestrian_index": 2,
+  "primary_actor_type": "pedestrian",
+  "primary_actor_index": 2,
+  "conflict_point_xy": [
+    23.258065223693855,
+    0.0
+  ],
+  "preserved_rois": [
+    {
+      "x_min": 21.883066177368164,
+      "y_min": -8.110494136810303,
+      "x_max": 24.633066177368164,
+      "y_max": -5.360494136810303,
+      "tag": "primary_actor"
+    },
+    {
+      "x_min": 16.087081909179688,
+      "y_min": -6.919400334358215,
+      "x_max": 22.707759857177734,
+      "y_max": -2.8827093839645386,
+      "tag": "occluder"
+    },
+    {
+      "x_min": 21.758065223693855,
+      "y_min": -8.235494136810303,
+      "x_max": 24.758066177368164,
+      "y_max": 1.5,
+      "tag": "conflict_corridor"
+    },
+    {
+      "x_min": 21.258065223693855,
+      "y_min": -2.0,
+      "x_max": 25.258065223693855,
+      "y_max": 2.0,
+      "tag": "road_anchor"
+    }
+  ],
+  "removed_vehicle_indices": [],
+  "slowed_vehicle_indices": [],
+  "notes": [
+    "select_road_anchor: {'anchor_type': 'ego_future_path', 'lane_context': 'ego_path', 'x': 21.5, 'y': 0.0, 'lane_y': 0.0, 'ego_speed': 6.460573673248291}",
+    "select_or_spawn_actor: pedestrian/crossing_actor -> pedestrians[2]",
+    "place_actor_laterally: pedestrians[2] at (21.50, -5.10)",
+    "synchronize_occluded_interaction_v2: target_ttc=3.60s, ped_lane_entry=3.60s, ego_speed=6.46->6.46m/s, lane_y=0.00",
+    "add_or_select_occluder: vehicles[5] type=vehicle raw=(19.40,-4.90) display=(19.40,-4.90); actor display=(23.26,-5.06)"
+  ]
+}

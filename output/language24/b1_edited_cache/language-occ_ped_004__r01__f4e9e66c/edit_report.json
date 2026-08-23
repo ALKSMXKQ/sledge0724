@@ -1,0 +1,98 @@
+{
+  "prompt_spec": {
+    "raw_prompt": "A person becomes visible from behind a roadside van and crosses into the ego lane at 1.6 m/s.",
+    "normalized_prompt": "A person becomes visible from behind a roadside van and crosses into the ego lane at 1.6 m/s.",
+    "scenario_type": "Occluded-Pedestrian",
+    "city": null,
+    "map_id": null,
+    "occluder_type": "vehicle",
+    "side": "right",
+    "moderate_traffic": false,
+    "yielding": false,
+    "blind_spot": false,
+    "pedestrian_emerge": true,
+    "use_existing_occluder_first": false,
+    "insert_occluder_if_missing": true,
+    "severity_level": "moderate",
+    "primary_actor_type": "pedestrian",
+    "crossing_style": "pedestrian_crossing",
+    "pedestrian_speed": 1.6,
+    "vehicle_speed": 8.0,
+    "target_speed_mps": 1.6,
+    "ttc_min_s": 2.0,
+    "ttc_max_s": 3.0,
+    "conflict_point_x_m": 14.0,
+    "conflict_point_y_m": 0.0,
+    "target_gap_min_m": 14.355352953562669,
+    "target_gap_max_m": 18.35535295356267,
+    "lead_distance_min_m": 14.355352953562669,
+    "lead_distance_max_m": 18.35535295356267,
+    "lateral_speed_min_mps": 0.8,
+    "lateral_speed_max_mps": 2.4,
+    "relative_speed_min_mps": 2.0,
+    "relative_speed_max_mps": 4.0,
+    "target_decel_min_mps2": 4.504535880276843,
+    "target_decel_max_mps2": 6.504535880276843,
+    "spawn_from_roadside": true,
+    "keep_scene_minimal": true,
+    "allow_actor_insertion": true,
+    "prefer_existing_actor": false,
+    "matched_rules": [
+      "semantic_signature:straight/ego_path/pedestrian/crossing_actor/lateral_conflict/right_to_left/occluded/moderate/near_miss"
+    ],
+    "debug": {
+      "hazard_spec_id": "occluded_pedestrian_b37fb0ef9ed5"
+    }
+  },
+  "occluder_source": "vehicle",
+  "occluder_index": 20,
+  "occluder_elem_name": "vehicles",
+  "static_obstacle_index": -1,
+  "pedestrian_index": 11,
+  "primary_actor_type": "pedestrian",
+  "primary_actor_index": 11,
+  "conflict_point_xy": [
+    23.436894416809082,
+    0.0
+  ],
+  "preserved_rois": [
+    {
+      "x_min": 22.061893463134766,
+      "y_min": -10.283846855163574,
+      "x_max": 24.811893463134766,
+      "y_max": -7.533846855163574,
+      "tag": "primary_actor"
+    },
+    {
+      "x_min": 15.647751092910767,
+      "y_min": -7.1432271003723145,
+      "x_max": 23.47613501548767,
+      "y_max": -3.066650867462158,
+      "tag": "occluder"
+    },
+    {
+      "x_min": 21.936893463134766,
+      "y_min": -10.408846855163574,
+      "x_max": 24.936894416809082,
+      "y_max": 1.5,
+      "tag": "conflict_corridor"
+    },
+    {
+      "x_min": 21.436894416809082,
+      "y_min": -2.0,
+      "x_max": 25.436894416809082,
+      "y_max": 2.0,
+      "tag": "road_anchor"
+    }
+  ],
+  "removed_vehicle_indices": [],
+  "slowed_vehicle_indices": [],
+  "notes": [
+    "select_road_anchor: {'anchor_type': 'ego_future_path', 'lane_context': 'ego_path', 'x': 14.0, 'y': -1.0, 'lane_y': -1.0, 'ego_speed': 9.374757766723633}",
+    "select_or_spawn_actor: pedestrian/crossing_actor -> pedestrians[11]",
+    "place_actor_laterally: pedestrians[11] at (14.00, -5.10)",
+    "synchronize_occluded_interaction_v2: target_ttc=2.50s, ped_lane_entry=2.50s, ego_speed=9.37->9.37m/s, lane_y=0.00",
+    "clear_occluder_reserved_region: moved_or_deleted=1",
+    "add_or_select_occluder: vehicles[20] type=vehicle raw=(19.56,-5.10) display=(19.56,-5.10); actor display=(23.44,-5.55)"
+  ]
+}

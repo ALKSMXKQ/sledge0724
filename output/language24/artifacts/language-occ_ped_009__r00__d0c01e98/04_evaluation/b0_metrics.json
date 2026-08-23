@@ -1,0 +1,14 @@
+{
+  "schema_version": "occluded_pedestrian_metrics_v2_timing_consistent",
+  "overall_pass": false,
+  "semantic_satisfaction_rate": 0.0,
+  "checks": {
+    "pedestrian_exists": false
+  },
+  "reason": "no valid pedestrian candidate",
+  "expected": {
+    "occluder_type": "vehicle",
+    "direction": "right_to_left",
+    "pedestrian_speed_mps": 1.098719916804927
+  }
+}

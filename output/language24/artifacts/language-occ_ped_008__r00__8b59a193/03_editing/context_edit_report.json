@@ -1,0 +1,380 @@
+{
+  "schema_version": "elastic_context_edit_v2_move_then_delete",
+  "policy": {
+    "lateral_gap_floor_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "longitudinal_extension_m": [
+      0.0,
+      6.0,
+      12.0
+    ],
+    "min_ego_speed_mps": 2.5,
+    "max_ego_speed_mps": 15.0,
+    "allow_background_reposition": true,
+    "allow_background_removal": true,
+    "background_policy": "move_then_delete_local_blockers"
+  },
+  "construction_contract": {
+    "hard_preserve": [
+      "road_geometry",
+      "lane_geometry"
+    ],
+    "semantic_controls": [
+      "ego_state",
+      "primary_pedestrian",
+      "occluder"
+    ],
+    "elastic_context": [
+      "background_vehicles",
+      "background_pedestrians",
+      "background_static_objects"
+    ],
+    "background_priority": [
+      "preserve_if_not_blocking",
+      "reposition_if_blocking",
+      "delete_if_relocation_fails"
+    ],
+    "hazard_constraints_remain_hard": true,
+    "background_removal_allowed": true,
+    "traffic_lights_removed": false
+  },
+  "sampled_ego_target_mps": 14.352300187973439,
+  "selected_attempt": 0,
+  "accepted_by_metrics_preview": true,
+  "hard_road_lane_preserved": true,
+  "ego_edit": {
+    "operation": "semantic_control",
+    "before": {
+      "velocity_x_mps": 5.205918788909912,
+      "velocity_y_mps": -0.21866682171821594,
+      "speed_mps": 5.210509151287002,
+      "acceleration_x_mps2": 0.7773353457450867,
+      "acceleration_y_mps2": 2.150975227355957,
+      "acceleration_mps2": 2.2871258532148255
+    },
+    "after": {
+      "velocity_x_mps": 14.352300643920898,
+      "velocity_y_mps": 0.0,
+      "speed_mps": 14.352300643920898,
+      "acceleration_x_mps2": 0.0,
+      "acceleration_y_mps2": 0.0,
+      "acceleration_mps2": 0.0
+    },
+    "requested_speed_mps": 14.352300187973439,
+    "requested_acceleration_mps2": 0.0,
+    "reason": "ego is a semantic control in EDIT_EXISTING and may be further synchronized by the occluded-interaction geometry solver"
+  },
+  "geometry_edit": {
+    "lateral_gap_range_before_m": [
+      0.3,
+      1.0
+    ],
+    "lateral_gap_range_after_m": [
+      0.3,
+      1.0
+    ],
+    "longitudinal_distance_range_before_m": [
+      5.0,
+      10.0
+    ],
+    "longitudinal_distance_range_after_m": [
+      5.0,
+      10.0
+    ],
+    "reason": "keep lateral risk prior unchanged; only widen longitudinal search because pedestrian lateral position is timing-derived"
+  },
+  "execution_hints": {
+    "occluder_width_m": 2.417865454084253,
+    "occluder_length_m": 8.855250976844387,
+    "occluder_lateral_offset_m": 1.1007256437558293,
+    "semantic_lane_center_y": 0.0
+  },
+  "background_actor_edits": [
+    {
+      "element": "vehicles",
+      "index": 13,
+      "operation": "reposition",
+      "before": {
+        "x": 14.622591018676758,
+        "y": 4.734220027923584,
+        "heading": 0.6419631838798523,
+        "width": 1.9338650703430176,
+        "length": 4.593242645263672,
+        "velocity": 0.0
+      },
+      "after": {
+        "x": 6.622591018676758,
+        "y": 4.734220027923584,
+        "heading": 0.6419631838798523,
+        "width": 1.9338650703430176,
+        "length": 4.593242645263672,
+        "velocity": 0.0
+      },
+      "displacement_m": 8.0,
+      "reason": "clear_occluder_reserved_region"
+    },
+    {
+      "element": "vehicles",
+      "index": 28,
+      "operation": "reposition",
+      "before": {
+        "x": 11.00131893157959,
+        "y": 10.00448226928711,
+        "heading": -2.5259501934051514,
+        "width": 2.0125725269317627,
+        "length": 5.396308422088623,
+        "velocity": 2.5153937339782715
+      },
+      "after": {
+        "x": 7.00131893157959,
+        "y": 10.00448226928711,
+        "heading": -2.5259501934051514,
+        "width": 2.0125725269317627,
+        "length": 5.396308422088623,
+        "velocity": 2.5153937339782715
+      },
+      "displacement_m": 4.0,
+      "reason": "clear_occluder_reserved_region"
+    },
+    {
+      "element": "vehicles",
+      "index": 15,
+      "operation": "reposition",
+      "before": {
+        "x": 23.968669891357422,
+        "y": 12.09088134765625,
+        "heading": 0.6277914643287659,
+        "width": 1.9381920099258423,
+        "length": 4.865894794464111,
+        "velocity": 0.0
+      },
+      "after": {
+        "x": 35.96866989135742,
+        "y": 12.09088134765625,
+        "heading": 0.6277914643287659,
+        "width": 1.9381920099258423,
+        "length": 4.865894794464111,
+        "velocity": 0.0
+      },
+      "displacement_m": 12.0,
+      "reason": "clear_occluder_reserved_region"
+    }
+  ],
+  "background_actor_edit_count": 3,
+  "background_reposition_count": 3,
+  "background_removal_count": 0,
+  "removal_used": false,
+  "attempts": [
+    {
+      "attempt_index": 0,
+      "policy": {
+        "lateral_gap_floor_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "longitudinal_extension_m": [
+          0.0,
+          6.0,
+          12.0
+        ],
+        "min_ego_speed_mps": 2.5,
+        "max_ego_speed_mps": 15.0,
+        "allow_background_reposition": true,
+        "allow_background_removal": true,
+        "background_policy": "move_then_delete_local_blockers"
+      },
+      "ego_edit": {
+        "operation": "semantic_control",
+        "before": {
+          "velocity_x_mps": 5.205918788909912,
+          "velocity_y_mps": -0.21866682171821594,
+          "speed_mps": 5.210509151287002,
+          "acceleration_x_mps2": 0.7773353457450867,
+          "acceleration_y_mps2": 2.150975227355957,
+          "acceleration_mps2": 2.2871258532148255
+        },
+        "after": {
+          "velocity_x_mps": 14.352300643920898,
+          "velocity_y_mps": 0.0,
+          "speed_mps": 14.352300643920898,
+          "acceleration_x_mps2": 0.0,
+          "acceleration_y_mps2": 0.0,
+          "acceleration_mps2": 0.0
+        },
+        "requested_speed_mps": 14.352300187973439,
+        "requested_acceleration_mps2": 0.0,
+        "reason": "ego is a semantic control in EDIT_EXISTING and may be further synchronized by the occluded-interaction geometry solver"
+      },
+      "geometry_edit": {
+        "lateral_gap_range_before_m": [
+          0.3,
+          1.0
+        ],
+        "lateral_gap_range_after_m": [
+          0.3,
+          1.0
+        ],
+        "longitudinal_distance_range_before_m": [
+          5.0,
+          10.0
+        ],
+        "longitudinal_distance_range_after_m": [
+          5.0,
+          10.0
+        ],
+        "reason": "keep lateral risk prior unchanged; only widen longitudinal search because pedestrian lateral position is timing-derived"
+      },
+      "execution_hints": {
+        "occluder_width_m": 2.417865454084253,
+        "occluder_length_m": 8.855250976844387,
+        "occluder_lateral_offset_m": 1.1007256437558293,
+        "semantic_lane_center_y": 0.0
+      },
+      "background_actor_edits": [
+        {
+          "element": "vehicles",
+          "index": 13,
+          "operation": "reposition",
+          "before": {
+            "x": 14.622591018676758,
+            "y": 4.734220027923584,
+            "heading": 0.6419631838798523,
+            "width": 1.9338650703430176,
+            "length": 4.593242645263672,
+            "velocity": 0.0
+          },
+          "after": {
+            "x": 6.622591018676758,
+            "y": 4.734220027923584,
+            "heading": 0.6419631838798523,
+            "width": 1.9338650703430176,
+            "length": 4.593242645263672,
+            "velocity": 0.0
+          },
+          "displacement_m": 8.0,
+          "reason": "clear_occluder_reserved_region"
+        },
+        {
+          "element": "vehicles",
+          "index": 28,
+          "operation": "reposition",
+          "before": {
+            "x": 11.00131893157959,
+            "y": 10.00448226928711,
+            "heading": -2.5259501934051514,
+            "width": 2.0125725269317627,
+            "length": 5.396308422088623,
+            "velocity": 2.5153937339782715
+          },
+          "after": {
+            "x": 7.00131893157959,
+            "y": 10.00448226928711,
+            "heading": -2.5259501934051514,
+            "width": 2.0125725269317627,
+            "length": 5.396308422088623,
+            "velocity": 2.5153937339782715
+          },
+          "displacement_m": 4.0,
+          "reason": "clear_occluder_reserved_region"
+        },
+        {
+          "element": "vehicles",
+          "index": 15,
+          "operation": "reposition",
+          "before": {
+            "x": 23.968669891357422,
+            "y": 12.09088134765625,
+            "heading": 0.6277914643287659,
+            "width": 1.9381920099258423,
+            "length": 4.865894794464111,
+            "velocity": 0.0
+          },
+          "after": {
+            "x": 35.96866989135742,
+            "y": 12.09088134765625,
+            "heading": 0.6277914643287659,
+            "width": 1.9381920099258423,
+            "length": 4.865894794464111,
+            "velocity": 0.0
+          },
+          "displacement_m": 12.0,
+          "reason": "clear_occluder_reserved_region"
+        }
+      ],
+      "background_actor_edit_count": 3,
+      "background_reposition_count": 3,
+      "background_removal_count": 0,
+      "removal_used": false,
+      "editor_finished": true,
+      "hard_road_lane_preserved": true,
+      "b1_metrics_preview": {
+        "schema_version": "occluded_pedestrian_metrics_v2_timing_consistent",
+        "overall_pass": true,
+        "semantic_satisfaction_rate": 1.0,
+        "checks": {
+          "pedestrian_exists": true,
+          "occluder_exists": true,
+          "occluder_between_ego_and_actor": true,
+          "line_of_sight_occlusion": true,
+          "occluder_clear_of_ego_corridor": true,
+          "direction_match": true,
+          "speed_match": true,
+          "crossing_reaches_ego_lane": true,
+          "interaction_timing_match": true,
+          "no_actor_occluder_initial_overlap": true,
+          "occluder_stationary": true
+        },
+        "pedestrian": {
+          "index": 0,
+          "xy": [
+            22.963680267333984,
+            4.821995735168457
+          ],
+          "heading": -1.5707963705062866,
+          "speed_mps": 1.899999976158142,
+          "expected_speed_mps": 1.9,
+          "speed_error_mps": 2.3841857821338408e-08,
+          "inferred_direction": "left_to_right",
+          "expected_direction": "left_to_right"
+        },
+        "occluder": {
+          "element": "vehicles",
+          "index": 43,
+          "xy": [
+            17.519128799438477,
+            4.598696231842041
+          ],
+          "size": [
+            2.417865514755249,
+            8.85525131225586
+          ],
+          "heading": 0.0,
+          "projection_ratio": 0.7709630352633815,
+          "perpendicular_distance_m": 0.900331789157321,
+          "lane_boundary_gap_m": 1.6077678799629211,
+          "speed_mps": 0.0
+        },
+        "interaction": {
+          "ego_speed_mps": 14.352300643920898,
+          "projection_time_s": 2.1,
+          "lane_center_y": 0.0,
+          "lane_half_width_m": 1.7819955945014954,
+          "conflict_x_m": 22.963680267333984,
+          "pedestrian_lane_entry_time_s": 1.6000000941125998,
+          "ego_arrival_time_s": 1.59999994684201,
+          "arrival_time_error_s": 1.4727058972319185e-07,
+          "interaction_ttc_s": 1.6000000941125998,
+          "target_ttc_range_s": [
+            1.2,
+            2.0
+          ]
+        }
+      },
+      "preview_pass": true
+    }
+  ]
+}

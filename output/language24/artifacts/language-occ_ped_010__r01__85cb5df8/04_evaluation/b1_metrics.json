@@ -1,0 +1,63 @@
+{
+  "schema_version": "occluded_pedestrian_metrics_v2_timing_consistent",
+  "overall_pass": false,
+  "semantic_satisfaction_rate": 0.9090909090909091,
+  "checks": {
+    "pedestrian_exists": true,
+    "occluder_exists": true,
+    "occluder_between_ego_and_actor": true,
+    "line_of_sight_occlusion": true,
+    "occluder_clear_of_ego_corridor": true,
+    "direction_match": true,
+    "speed_match": true,
+    "crossing_reaches_ego_lane": true,
+    "interaction_timing_match": true,
+    "no_actor_occluder_initial_overlap": false,
+    "occluder_stationary": true
+  },
+  "pedestrian": {
+    "index": 28,
+    "xy": [
+      19.251319885253906,
+      4.817563056945801
+    ],
+    "heading": -1.5707963705062866,
+    "speed_mps": 1.2584245204925537,
+    "expected_speed_mps": 1.2584245540087622,
+    "speed_error_mps": 3.351620847524828e-08,
+    "inferred_direction": "left_to_right",
+    "expected_direction": "left_to_right"
+  },
+  "occluder": {
+    "element": "static_objects",
+    "index": 48,
+    "xy": [
+      17.711214065551758,
+      5.18215799331665
+    ],
+    "size": [
+      0.9642053842544556,
+      3.9288113117218018
+    ],
+    "heading": 1.5707963705062866,
+    "projection_ratio": 0.9291746161311369,
+    "perpendicular_distance_m": 0.7275648038886252,
+    "lane_boundary_gap_m": 1.5462504414586666,
+    "speed_mps": 0.0
+  },
+  "interaction": {
+    "ego_speed_mps": 7.700528144836426,
+    "projection_time_s": 2.1,
+    "lane_center_y": 0.0,
+    "lane_half_width_m": 1.671501874923706,
+    "conflict_x_m": 19.251319885253906,
+    "pedestrian_lane_entry_time_s": 2.4999999052710082,
+    "ego_arrival_time_s": 2.4999999380773437,
+    "arrival_time_error_s": 3.280633542601663e-08,
+    "interaction_ttc_s": 2.4999999380773437,
+    "target_ttc_range_s": [
+      2.0,
+      3.0
+    ]
+  }
+}

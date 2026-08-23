@@ -1,0 +1,5 @@
+{
+  "construction_mode": "edit_existing",
+  "source_scene_usage": "road_fixed_elastic_semantic_base_scene",
+  "source_semantic_content_preserved": true
+}

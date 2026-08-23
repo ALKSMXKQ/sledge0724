@@ -1,37 +1,84 @@
 {
-  "schema_version": "occluded_pedestrian_matrix_v2_nuplan_types",
+  "schema_version": "occluded_pedestrian_matrix_v3_hierarchical_side",
   "diversity_axes": [
     "occluder_type",
-    "crossing_direction",
+    "occluder_side",
     "pedestrian_speed_mps",
     "source_scenario_type"
   ],
+  "semantic_direction": "occluder_to_ego_path",
   "source_sampling": "deterministic_stratified_round_robin",
   "prompt_templates": [
-    "A pedestrian hidden behind a {occluder} emerges and crosses from {direction} at pedestrian speed {speed} m/s, creating a {risk} near-miss ahead of ego.",
-    "Generate a {risk} scene where a person comes out from behind a {occluder} and moves from {direction} across the ego path at pedestrian speed {speed} m/s.",
-    "The {occluder} blocks ego's view before a pedestrian suddenly crosses {direction} at pedestrian speed {speed} m/s; keep the interaction {risk} without an initial collision.",
-    "A {risk} occluded-pedestrian event: a {occluder} hides a pedestrian, who then rushes {direction} into ego's path at {speed} m/s."
+    "A pedestrian hidden behind a {occluder} {side} emerges toward the ego path at {speed} m/s, creating a {risk} near-miss.",
+    "Generate a {risk} scene where a person comes out from behind a {occluder} {side} and moves into the ego lane at {speed} m/s.",
+    "The {occluder} {side} blocks ego's view before a pedestrian suddenly enters the ego path at {speed} m/s.",
+    "A {risk} occluded-pedestrian event: a {occluder} {side} hides a pedestrian, who then moves from the occluder toward ego's path at {speed} m/s."
   ],
   "profiles": {
     "debug20": {
-      "occluder_types": ["vehicle"],
-      "directions": ["right_to_left"],
-      "pedestrian_speeds_mps": [1.6],
+      "occluder_types": [
+        "vehicle"
+      ],
+      "occluder_sides": [
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.6
+      ],
       "risk_level": "moderate",
       "samples_per_condition": 20
     },
+    "diagnostic24": {
+      "occluder_types": [
+        "vehicle",
+        "barrier"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.2,
+        1.6,
+        1.9
+      ],
+      "risk_level": "moderate",
+      "samples_per_condition": 2
+    },
     "paper18": {
-      "occluder_types": ["vehicle", "barrier", "generic_object"],
-      "directions": ["left_to_right", "right_to_left"],
-      "pedestrian_speeds_mps": [1.2, 1.6, 1.9],
+      "occluder_types": [
+        "vehicle",
+        "barrier",
+        "generic_object"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.2,
+        1.6,
+        1.9
+      ],
       "risk_level": "moderate",
       "samples_per_condition": 10
     },
     "extended24": {
-      "occluder_types": ["vehicle", "bicycle", "barrier", "generic_object"],
-      "directions": ["left_to_right", "right_to_left"],
-      "pedestrian_speeds_mps": [1.2, 1.6, 1.9],
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "barrier",
+        "generic_object"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.2,
+        1.6,
+        1.9
+      ],
       "risk_level": "moderate",
       "samples_per_condition": 10
     },
@@ -44,8 +91,15 @@
         "barrier",
         "czone_sign"
       ],
-      "directions": ["left_to_right", "right_to_left"],
-      "pedestrian_speeds_mps": [1.6, 1.9, 2.0],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.6,
+        1.9,
+        2.0
+      ],
       "risk_level": "moderate",
       "total_samples": 100
     }

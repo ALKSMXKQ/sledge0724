@@ -42,4 +42,11 @@ bash latent_caching_rvae.sh
 cd $SLEDGE_DEVKIT_ROOT/scripts/diffusion/
 bash training_diffusion.sh
 
+清理所有环境
+deactivate 2>/dev/null || true
+conda deactivate
+conda deactivate 2>/dev/null || true
 
+打开本地终端：
+Ctrl + Shift + P
+输入：Terminal: Create New Integrated Terminal (Local)

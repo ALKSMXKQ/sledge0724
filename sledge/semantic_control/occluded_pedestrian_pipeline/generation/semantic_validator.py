@@ -560,10 +560,58 @@ def _check_no_initial_collision(scene: SledgeVectorRaw, ctx=None) -> bool:
             l = float(max(s[AgentIndex.LENGTH], 0.5))
             boxes.append((elem_name, int(idx), x, y, l, w))
 
+    # In strict additive mode, pre-existing B0 overlaps are immutable and
+    # cannot be "fixed" without violating source preservation. Validate only
+    # pairs involving one of the two newly controlled entities. This still
+    # checks each addition against ego, every source object, and each other.
+    controlled = set()
+    if ctx is not None:
+        controlled.add(
+            (
+                str(
+                    getattr(
+                        ctx,
+                        "actor_elem_name",
+                        "pedestrians",
+                    )
+                ),
+                int(
+                    getattr(
+                        ctx,
+                        "actor_index",
+                        -1,
+                    )
+                ),
+            )
+        )
+        controlled.add(
+            (
+                str(
+                    getattr(
+                        ctx,
+                        "occluder_elem_name",
+                        "vehicles",
+                    )
+                ),
+                int(
+                    getattr(
+                        ctx,
+                        "occluder_index",
+                        -1,
+                    )
+                ),
+            )
+        )
+
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
             name_i, idx_i, ax, ay, al, aw = boxes[i]
             name_j, idx_j, bx, by, bl, bw = boxes[j]
+            if controlled and (
+                (name_i, idx_i) not in controlled
+                and (name_j, idx_j) not in controlled
+            ):
+                continue
 
             # Slightly relaxed for different object classes but strict enough to
             # catch ego/occluder overlaps.

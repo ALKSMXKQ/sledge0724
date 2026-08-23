@@ -1,0 +1,11 @@
+{
+  "prompt": "A runner hidden behind a roadside barrier becomes visible and moves across the ego path.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": null,
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": null,
+    "seed": 50914351
+  }
+}

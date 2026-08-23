@@ -1,0 +1,129 @@
+[
+  {
+    "name": "select_road_anchor",
+    "params": {
+      "road_topology": "straight",
+      "lane_context": "ego_path",
+      "anchor_type": "ego_future_path",
+      "anchor_region": "front",
+      "has_crosswalk": null,
+      "has_intersection": null,
+      "has_merge_area": null,
+      "allow_lane_generation": false,
+      "generated_road_layout": "none",
+      "generated_road_radius_m": 14.0
+    },
+    "source_layer": "road_layer"
+  },
+  {
+    "name": "select_or_spawn_actor",
+    "params": {
+      "primary_actor": "pedestrian",
+      "actor_role": "crossing_actor",
+      "prefer_existing_actor": false,
+      "allow_actor_insertion": true,
+      "allow_actor_replacement": true
+    },
+    "source_layer": "actor_layer"
+  },
+  {
+    "name": "place_actor_laterally",
+    "params": {
+      "conflict_type": "lateral_conflict",
+      "direction": "right_to_left",
+      "distance_relation": "close",
+      "longitudinal_distance_range_m": [
+        18.0,
+        25.0
+      ],
+      "lateral_gap_range_m": [
+        2.0,
+        3.0
+      ]
+    },
+    "source_layer": "interaction_layer"
+  },
+  {
+    "name": "set_lateral_or_crossing_motion",
+    "params": {
+      "direction": "right_to_left",
+      "speed_relation": "normal",
+      "target_actor_speed_mps": 0.8
+    },
+    "source_layer": "interaction_layer"
+  },
+  {
+    "name": "add_or_select_occluder",
+    "params": {
+      "secondary_actor": "vehicle",
+      "occluder_type": "vehicle",
+      "occlusion_position": "between_ego_and_actor",
+      "occlusion_level": "full",
+      "risk_level": "mild",
+      "target_actor_speed_mps": 0.8,
+      "longitudinal_distance_range_m": [
+        18.0,
+        25.0
+      ],
+      "lateral_gap_range_m": [
+        2.0,
+        3.0
+      ],
+      "direction": "right_to_left",
+      "frame0_time_offset_s": 2.1,
+      "compensate_frame0_offset": true,
+      "avoid_ego_overlap": true,
+      "avoid_actor_overlap": true,
+      "avoid_existing_agent_overlap": true
+    },
+    "source_layer": "object_layer"
+  },
+  {
+    "name": "apply_risk_scaling",
+    "params": {
+      "risk_level": "mild",
+      "ttc_range_s": [
+        3.0,
+        4.2
+      ],
+      "gap_range_m": [
+        9.136024012799533,
+        13.136024012799533
+      ],
+      "lateral_gap_range_m": [
+        2.0,
+        3.0
+      ],
+      "collision_allowed": false
+    },
+    "source_layer": "risk_layer"
+  },
+  {
+    "name": "build_protection_rois",
+    "params": {
+      "protected_targets": [
+        "primary_actor",
+        "secondary_actor",
+        "static_obstacle",
+        "conflict_corridor",
+        "road_anchor"
+      ]
+    },
+    "source_layer": "protection_layer"
+  },
+  {
+    "name": "validate_semantic_constraints",
+    "params": {
+      "require_actor_match": true,
+      "require_road_context_match": false,
+      "require_conflict_relation": true,
+      "require_direction_match": true,
+      "require_visibility_match": true,
+      "require_lane_validity": true,
+      "require_no_initial_collision": true,
+      "require_ttc_in_range": true,
+      "require_gap_in_range": true
+    },
+    "source_layer": "validation_layer"
+  }
+]

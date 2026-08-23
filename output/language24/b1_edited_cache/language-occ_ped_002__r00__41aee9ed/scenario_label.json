@@ -1,0 +1,135 @@
+{
+  "schema_version": "occluded_pedestrian_label_v6_timing_consistent",
+  "sample_id": "language-occ_ped_002__r00__41aee9ed",
+  "scenario_type": "sudden_pedestrian_crossing",
+  "semantic_family": "occluded_pedestrian",
+  "severity_level": "moderate",
+  "prompt": "An adult pedestrian steps out from behind a parked car on the left roadside and enters the ego lane at 1.2 m/s.",
+  "prompt_case_id": "occ_ped_002",
+  "condition_id": "language-occ_ped_002",
+  "construction_mode": "edit_existing",
+  "scene_construction": {
+    "mode": "edit_existing",
+    "reason": "no_explicit_global_road_structure",
+    "explicit_global_constraints": {},
+    "local_hazard_constraints": {
+      "primary_actor_type": "pedestrian",
+      "hazard_interaction": "occluded_emergence",
+      "auxiliary_entity": "parked_car_occluder",
+      "source_region": "left_side",
+      "target_region": "ego_lane",
+      "anchor_region": "near_front",
+      "visibility": "fully_occluded",
+      "motion_direction": "occluder_to_ego_path",
+      "trigger_event": "occluded_actor_becomes_visible",
+      "ego_required_response": "brake_or_emergency_brake",
+      "risk_level": "moderate",
+      "actor_speed_mps": 1.2
+    },
+    "preserve_from_b0": [
+      "road_geometry",
+      "lane_geometry"
+    ],
+    "hard_preserve_from_b0": [
+      "road_geometry",
+      "lane_geometry",
+      "road_topology"
+    ],
+    "semantic_edit_controls": [
+      "ego_state",
+      "primary_pedestrian",
+      "occluder"
+    ],
+    "elastic_context": [
+      "background_vehicles",
+      "background_pedestrians",
+      "background_static_objects"
+    ],
+    "context_edit_policy": {
+      "mode": "move_then_delete_local_blockers",
+      "preserve_unrelated_context_when_feasible": true,
+      "allow_reposition": true,
+      "allow_velocity_adjustment": false,
+      "allow_removal": true,
+      "removal_scope": "local_occluder_reserved_region_only",
+      "traffic_lights_removable": false,
+      "hazard_constraints_remain_hard": true
+    },
+    "sample_from_template": [
+      "ego_speed_mps",
+      "ego_acceleration_mps2",
+      "ego_distance_to_conflict_m",
+      "occluder_side",
+      "actor_speed_mps",
+      "actor_acceleration_mps2",
+      "actor_start_time_s",
+      "occluder_length_m",
+      "occluder_width_m",
+      "occluder_lateral_offset_m",
+      "reveal_distance_m",
+      "minimum_clearance_m",
+      "braking_deceleration_mps2"
+    ],
+    "derive_from_scene": [
+      "conflict_point_xy",
+      "occluder_position",
+      "actor_initial_position",
+      "actor_heading",
+      "initial_gap_m",
+      "time_to_collision_s"
+    ],
+    "trigger_evidence": [],
+    "source_scene_usage": "road_fixed_elastic_semantic_base_scene",
+    "policy": "explicit_global_road_structure_routes_to_synthesis_v3_move_then_delete"
+  },
+  "source_scene_path": "../exp/caches/autoencoder_cache/2021.06.04.17.09.53_veh-47_04735_05164/near_multiple_pedestrians/1666d7a131265239/sledge_raw.gz",
+  "source_scene_usage": "road_fixed_elastic_semantic_base_scene",
+  "source_scenario_type": "near_multiple_pedestrians",
+  "language_actor_detail": "adult_or_unspecified",
+  "semantic_occluder_type": "parked_car_occluder",
+  "occluder_type": "vehicle",
+  "occluder_tracked_object_type": "VEHICLE",
+  "object_type_overrides": {
+    "vehicles": {
+      "24": "VEHICLE"
+    }
+  },
+  "semantic_direction": "occluder_to_ego_path",
+  "occluder_side": "left",
+  "direction": "left_to_right",
+  "pedestrian_speed_mps": 1.2,
+  "sample_seed": 2410883589,
+  "road_parameter_source": "b0_scene_context",
+  "ego_state_source": "hierarchical_template_semantic_control",
+  "hard_road_lane_preserved": true,
+  "background_actor_edit_count": 0,
+  "background_reposition_count": 0,
+  "background_removal_count": 0,
+  "background_removal_used": false,
+  "ego_edit": {
+    "operation": "semantic_control",
+    "before": {
+      "velocity_x_mps": 9.835423469543457,
+      "velocity_y_mps": -0.16786986589431763,
+      "speed_mps": 9.8368559569164,
+      "acceleration_x_mps2": -0.019564379006624222,
+      "acceleration_y_mps2": -0.18342368304729462,
+      "acceleration_mps2": 0.18446412233426107
+    },
+    "after": {
+      "velocity_x_mps": 5.634678840637207,
+      "velocity_y_mps": 0.0,
+      "speed_mps": 5.634678840637207,
+      "acceleration_x_mps2": 0.0,
+      "acceleration_y_mps2": 0.0,
+      "acceleration_mps2": 0.0
+    },
+    "requested_speed_mps": 5.6346788840484425,
+    "requested_acceleration_mps2": 0.0,
+    "reason": "ego is a semantic control in EDIT_EXISTING and may be further synchronized by the occluded-interaction geometry solver"
+  },
+  "semantic_lane_center_y": 0.0,
+  "semantic_projection_time_s": 2.1,
+  "accepted": true,
+  "artifact_root": "/home16T/home8T_1/leitingting/sledge_workspace/sledge/output/language24/artifacts/language-occ_ped_002__r00__41aee9ed"
+}

@@ -57,7 +57,9 @@ def prepare_stage_vector_caches(
 ) -> Dict[str, Path]:
     """Convert B0/B1 raw scenes into simulation-readable vectors; reuse true B2."""
     run_root = Path(run_root).resolve()
-    cases = _read_jsonl(run_root / "manifests/cases.jsonl")
+    cases = _accepted_cases(
+        run_root
+    )
     if max_scenes is not None:
         cases = cases[: int(max_scenes)]
     sledge_config = build_sledge_config(str(config))
@@ -160,7 +162,9 @@ def _make_simulation_compatible_vector(processed: SledgeVector, raw_scene: Any) 
 def save_all_stage_scene_visualizations(run_root: Path, *, max_scenes: Optional[int] = None) -> Dict[str, Any]:
     """Create direct B0/B1/B2 vector comparisons for every selected sample."""
     run_root = Path(run_root).resolve()
-    cases = _read_jsonl(run_root / "manifests/cases.jsonl")
+    cases = _accepted_cases(
+        run_root
+    )
     if max_scenes is not None:
         cases = cases[: int(max_scenes)]
     b2_by_sample = _b2_labels_by_sample(run_root / "b2_generated_cache")
@@ -603,6 +607,45 @@ def _read_json(path: Path) -> Dict[str, Any]:
 def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
     with Path(path).open("r", encoding="utf-8") as fp:
         return [json.loads(line) for line in fp if line.strip()]
+
+
+def _accepted_cases(
+    run_root: Path,
+) -> List[Dict[str, Any]]:
+    """Return only B1 cases that passed every gate and have stage caches."""
+
+    cases = _read_jsonl(
+        run_root
+        / "manifests/cases.jsonl"
+    )
+    by_id = {
+        str(
+            row["sample_id"]
+        ): row
+        for row in cases
+    }
+    results = _read_jsonl(
+        run_root
+        / "manifests/b1_results.jsonl"
+    )
+    return [
+        by_id[
+            str(
+                row["sample_id"]
+            )
+        ]
+        for row in results
+        if bool(
+            row.get(
+                "b1_pass",
+                False,
+            )
+        )
+        and str(
+            row["sample_id"]
+        )
+        in by_id
+    ]
 
 
 def _write_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:

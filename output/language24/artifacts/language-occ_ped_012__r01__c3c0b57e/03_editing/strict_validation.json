@@ -1,0 +1,191 @@
+{
+  "schema_version": "occluded_pedestrian_strict_validation_v2_canonical_metrics",
+  "source": "evaluation.metrics.evaluate_occluded_pedestrian_scene",
+  "checks": {
+    "pedestrian_exists": {
+      "required": true,
+      "passed": true
+    },
+    "occluder_exists": {
+      "required": true,
+      "passed": true
+    },
+    "occluder_between_ego_and_actor": {
+      "required": true,
+      "passed": true
+    },
+    "line_of_sight_occlusion": {
+      "required": true,
+      "passed": true
+    },
+    "occluder_clear_of_ego_corridor": {
+      "required": true,
+      "passed": true
+    },
+    "direction_match": {
+      "required": true,
+      "passed": true
+    },
+    "speed_match": {
+      "required": true,
+      "passed": true
+    },
+    "crossing_reaches_ego_lane": {
+      "required": true,
+      "passed": true
+    },
+    "interaction_timing_match": {
+      "required": true,
+      "passed": true
+    },
+    "no_actor_occluder_initial_overlap": {
+      "required": true,
+      "passed": true
+    },
+    "occluder_stationary": {
+      "required": true,
+      "passed": true
+    }
+  },
+  "semantic_satisfaction_rate": 1.0,
+  "overall_pass": true,
+  "interaction": {
+    "ego_speed_mps": 5.194867134094238,
+    "projection_time_s": 2.1,
+    "lane_center_y": 0.0,
+    "lane_half_width_m": 1.4617061614990234,
+    "conflict_x_m": 12.987167358398438,
+    "pedestrian_lane_entry_time_s": 2.500000223488903,
+    "ego_arrival_time_s": 2.4999999082099413,
+    "arrival_time_error_s": 3.1527896160454816e-07,
+    "interaction_ttc_s": 2.500000223488903,
+    "target_ttc_range_s": [
+      2.0,
+      3.0
+    ]
+  },
+  "pedestrian": {
+    "index": 3,
+    "xy": [
+      12.987167358398438,
+      3.795337438583374
+    ],
+    "heading": -1.5707963705062866,
+    "speed_mps": 0.9334524273872375,
+    "expected_speed_mps": 0.9334524351577355,
+    "speed_error_mps": 7.770497911785412e-09,
+    "inferred_direction": "left_to_right",
+    "expected_direction": "left_to_right"
+  },
+  "occluder": {
+    "element": "vehicles",
+    "index": 1,
+    "xy": [
+      9.039093017578125,
+      3.976036548614502
+    ],
+    "size": [
+      1.7662338018417358,
+      5.176407337188721
+    ],
+    "heading": 0.0,
+    "projection_ratio": 0.7236675396413974,
+    "perpendicular_distance_m": 1.2808988186788788,
+    "lane_boundary_gap_m": 1.6312134861946106,
+    "speed_mps": 0.0
+  },
+  "legacy_editor_validation": {
+    "checks": {
+      "actor_exists": {
+        "required": true,
+        "passed": true,
+        "elem_name": "pedestrians",
+        "actor_index": 3
+      },
+      "lateral_position": {
+        "required": true,
+        "passed": true,
+        "x": 12.987167358398438,
+        "y": 3.795337438583374
+      },
+      "crossing_heading": {
+        "required": true,
+        "passed": true,
+        "heading": -1.5707963705062866
+      },
+      "lateral_gap_in_range": {
+        "required": true,
+        "passed": true,
+        "target_lateral_gap_range_m": [
+          1.0,
+          2.0
+        ],
+        "tolerance_m": 2.0,
+        "abs_lateral_offset_m": 3.795337438583374,
+        "lateral_gap_to_lane_boundary_m": 1.9586312770843506,
+        "lateral_intrusion_m": 0.0,
+        "lane_half_width_m": 1.4617061614990234
+      },
+      "ttc_in_range": {
+        "required": true,
+        "passed": false,
+        "target_ttc_range_s": [
+          2.0,
+          3.0
+        ],
+        "ego_time_s": 2.5,
+        "actor_time_s": 4.065914156125391,
+        "interaction_ttc_s": 4.065914156125391,
+        "arrival_time_gap_s": 1.565914156125391,
+        "actor_vx_mps": -4.0802503101708694e-08,
+        "actor_vy_mps": -0.9334524273872367
+      },
+      "occluder_exists": {
+        "required": true,
+        "passed": true,
+        "occluder_index": 1,
+        "occluder_elem_name": "vehicles"
+      },
+      "occluder_between_ego_and_actor": {
+        "required": true,
+        "passed": true,
+        "projection_ratio": 0.7236675396413974,
+        "perpendicular_distance_m": 1.2808988186788788,
+        "actor_xy": [
+          12.987167358398438,
+          3.795337438583374
+        ],
+        "occluder_xy": [
+          9.039093017578125,
+          3.976036548614502
+        ]
+      },
+      "line_of_sight_occlusion": {
+        "required": true,
+        "passed": true,
+        "ego_xy": [
+          0.0,
+          0.0
+        ],
+        "actor_xy": [
+          12.987167358398438,
+          3.795337438583374
+        ],
+        "occluder_index": 1,
+        "occluder_elem_name": "vehicles"
+      },
+      "occluder_clear_of_ego_corridor": {
+        "required": true,
+        "passed": true,
+        "lane_boundary_gap_m": 1.6312134861946106,
+        "required_clearance_m": 1.5
+      },
+      "no_initial_collision": {
+        "required": true,
+        "passed": true
+      }
+    },
+    "semantic_satisfaction_rate": 0.9,
+    "overall_pass": false
+  }
+}

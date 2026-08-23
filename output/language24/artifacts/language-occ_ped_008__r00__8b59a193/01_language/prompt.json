@@ -1,0 +1,11 @@
+{
+  "prompt": "A pedestrian suddenly comes out from behind a bus on the left side and heads for the ego path at 1.9 m/s.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": "left",
+    "direction": null,
+    "pedestrian_speed_mps": 1.9,
+    "risk_level": "aggressive",
+    "seed": 942490800
+  }
+}

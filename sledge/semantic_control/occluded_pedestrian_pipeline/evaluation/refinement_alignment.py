@@ -27,6 +27,7 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
         self.preferred_pedestrian_index = None
         self.preferred_occluder_index = None
         self.preferred_occluder_elem_name = "vehicles"
+        self.lane_center_y = 0.0
         self.reference_scene = None
 
     def set_preferred_slots(self, pedestrian_index: int, occluder_index: int, occluder_elem_name: str) -> None:
@@ -37,6 +38,11 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
     def set_reference_scene(self, scene: Any) -> None:
         """Set the B1 vector whose road topology B2 must preserve."""
         self.reference_scene = scene
+
+    def set_lane_center_y(self, lane_center_y: float) -> None:
+        self.lane_center_y = float(
+            lane_center_y
+        )
 
     def evaluate(self, sledge_vector: Any, prompt_spec: Any = None) -> PromptAlignmentResult:
         prompt = str(getattr(prompt_spec, "raw_prompt", "") or getattr(prompt_spec, "normalized_prompt", ""))
@@ -49,6 +55,7 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
             preferred_occluder_index=self.preferred_occluder_index,
             preferred_occluder_elem_name=self.preferred_occluder_elem_name,
             projection_time_s=self.projection_time_s,
+            lane_center_y=self.lane_center_y,
         )
         checks = metrics.get("checks", {})
         details = {

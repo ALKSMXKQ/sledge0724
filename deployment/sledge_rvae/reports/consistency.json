@@ -1,0 +1,131 @@
+{
+  "generated_at": "2026-08-19T03:25:56.049769+00:00",
+  "precision": "fp32",
+  "postprocess_threshold": 0.3,
+  "backends": [
+    "onnxruntime",
+    "pytorch"
+  ],
+  "pending_backends": [
+    "tensorrt"
+  ],
+  "comparisons": {
+    "pytorch_vs_onnxruntime": {
+      "passed": true,
+      "thresholds": {
+        "max_abs": 0.0005,
+        "mean_abs": 5e-05
+      },
+      "global": {
+        "max_abs": 0.00035375356674194336,
+        "mean_abs": 2.1180531967829285e-05
+      },
+      "raw_outputs": {
+        "lines_states": {
+          "max_abs": 0.00035375356674194336,
+          "mean_abs": 2.9846841003745796e-05
+        },
+        "lines_logits": {
+          "max_abs": 7.534027099609375e-05,
+          "mean_abs": 1.936614513397217e-05
+        },
+        "vehicles_states": {
+          "max_abs": 0.000102996826171875,
+          "mean_abs": 8.151466803004344e-06
+        },
+        "vehicles_logits": {
+          "max_abs": 9.775161743164062e-05,
+          "mean_abs": 1.0576248168945312e-05
+        },
+        "pedestrians_states": {
+          "max_abs": 6.103515625e-05,
+          "mean_abs": 8.399225771427155e-06
+        },
+        "pedestrians_logits": {
+          "max_abs": 2.09808349609375e-05,
+          "mean_abs": 8.630752563476563e-06
+        },
+        "static_objects_states": {
+          "max_abs": 9.34600830078125e-05,
+          "mean_abs": 9.677807490030925e-06
+        },
+        "static_objects_logits": {
+          "max_abs": 5.4836273193359375e-05,
+          "mean_abs": 1.6053517659505207e-05
+        },
+        "green_lights_states": {
+          "max_abs": 0.00011157989501953125,
+          "mean_abs": 1.6703782021068035e-05
+        },
+        "green_lights_logits": {
+          "max_abs": 1.33514404296875e-05,
+          "mean_abs": 6.4373016357421875e-06
+        },
+        "red_lights_states": {
+          "max_abs": 8.082389831542969e-05,
+          "mean_abs": 1.4924113056622445e-05
+        },
+        "red_lights_logits": {
+          "max_abs": 3.4332275390625e-05,
+          "mean_abs": 1.0013580322265625e-05
+        },
+        "ego_states": {
+          "max_abs": 8.106231689453125e-06,
+          "mean_abs": 8.106231689453125e-06
+        },
+        "ego_mask": {
+          "max_abs": 0.0,
+          "mean_abs": 0.0
+        }
+      },
+      "postprocessed": {
+        "lines": {
+          "reference_count": 15,
+          "candidate_count": 15,
+          "active_query_iou": 1.0,
+          "max_abs_state_on_union": 0.00012874603271484375,
+          "mean_abs_probability": 4.2417468966984126e-07
+        },
+        "vehicles": {
+          "reference_count": 1,
+          "candidate_count": 1,
+          "active_query_iou": 1.0,
+          "max_abs_state_on_union": 1.0013580322265625e-05,
+          "mean_abs_probability": 1.7812358380341364e-08
+        },
+        "pedestrians": {
+          "reference_count": 1,
+          "candidate_count": 1,
+          "active_query_iou": 1.0,
+          "max_abs_state_on_union": 2.0265579223632812e-05,
+          "mean_abs_probability": 1.3659315264763276e-10
+        },
+        "static_objects": {
+          "reference_count": 2,
+          "candidate_count": 2,
+          "active_query_iou": 1.0,
+          "max_abs_state_on_union": 2.86102294921875e-05,
+          "mean_abs_probability": 4.2534364640856624e-08
+        },
+        "green_lights": {
+          "reference_count": 0,
+          "candidate_count": 0,
+          "active_query_iou": 1.0,
+          "max_abs_state_on_union": 0.0,
+          "mean_abs_probability": 3.513048116153418e-12
+        },
+        "red_lights": {
+          "reference_count": 0,
+          "candidate_count": 0,
+          "active_query_iou": 1.0,
+          "max_abs_state_on_union": 0.0,
+          "mean_abs_probability": 9.02913195996006e-11
+        }
+      }
+    }
+  },
+  "completed_comparisons_passed": true,
+  "three_backend_complete": false,
+  "three_backend_passed": false,
+  "passed": true
+}

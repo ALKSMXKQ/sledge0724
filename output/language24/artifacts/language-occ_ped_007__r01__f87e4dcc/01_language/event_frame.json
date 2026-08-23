@@ -1,0 +1,91 @@
+{
+  "sentence": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s.",
+  "main_actor": {
+    "text": "pedestrian",
+    "actor_class": "human_on_foot",
+    "actor_role": "hazard_actor",
+    "evidence_text": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s."
+  },
+  "ego_event": {
+    "ego_maneuver": "drive_forward",
+    "ego_state": "normal_driving",
+    "evidence_text": ""
+  },
+  "main_event": {
+    "event_type": "enter_ego_lane",
+    "predicate_text": "enters ego lane",
+    "path_or_object": "ego lane",
+    "event_location_relation": "right_of",
+    "location_relation_function": "event_anchor",
+    "source_relation": "from_right",
+    "target_relation": "ego_lane",
+    "motion_axis": "lateral",
+    "motion_direction": "right_to_left",
+    "evidence_text": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s."
+  },
+  "road_context": {
+    "road_type": "curbside",
+    "lane_context": "ego_lane",
+    "evidence_text": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s."
+  },
+  "occlusion": {
+    "enabled": true,
+    "occluder_type": "parked_vehicle",
+    "relation_to_actor": "behind",
+    "evidence_text": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s."
+  },
+  "missing_information": {
+    "required": [
+      "ego_speed",
+      "actor_speed",
+      "initial_distance"
+    ],
+    "defaultable": [],
+    "distributional": {}
+  },
+  "completed_parameters": {},
+  "event_sequence": [
+    {
+      "order": 1,
+      "actor": "ego",
+      "event_type": "ego_driving",
+      "action": "drive_forward",
+      "relation_to_previous": "start",
+      "evidence_text": ""
+    },
+    {
+      "order": 2,
+      "actor": "pedestrian",
+      "event_type": "enter_ego_lane",
+      "action": "enters ego lane",
+      "relation_to_previous": "after_ego_baseline",
+      "evidence_text": "A slowly moving pedestrian appears from behind a parked car on the right roadside and enters the ego lane at 0.8 m/s."
+    },
+    {
+      "order": 3,
+      "actor": "ego_and_hazard_actor",
+      "event_type": "conflict_point_approach",
+      "action": "ego_approaches_lateral_crossing_point",
+      "relation_to_previous": "after_hazard_event",
+      "evidence_text": "inferred: ego approaches the conflict region"
+    },
+    {
+      "order": 4,
+      "actor": "ego",
+      "event_type": "ego_response",
+      "action": "brake_or_yield_to_crossing_actor",
+      "relation_to_previous": "after_conflict_approach",
+      "evidence_text": "inferred: ego response required by hazard"
+    }
+  ],
+  "diagnostics": {
+    "is_path_crossing": true,
+    "is_lane_change_into_ego_lane": false,
+    "is_longitudinal_following": false,
+    "is_ego_left_turn": false,
+    "is_roundabout_entry": false,
+    "is_occluded": true
+  },
+  "confidence": 0.72,
+  "parser_notes": "parsed_by=fallback"
+}

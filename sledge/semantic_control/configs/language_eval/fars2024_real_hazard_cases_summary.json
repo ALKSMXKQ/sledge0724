@@ -1,0 +1,16 @@
+{
+  "source_url": "https://static.nhtsa.gov/nhtsa/downloads/FARS/2024/National/FARS2024NationalCSV.zip",
+  "zip_path": "sledge/semantic_control/configs/language_eval/raw/fars_2024/FARS2024NationalCSV.zip",
+  "narrative_style": "canonical",
+  "all": 360,
+  "train": 288,
+  "test": 72,
+  "groups": {
+    "fars_adjacent_lane_cutin": 60,
+    "fars_cyclist_crossing": 60,
+    "fars_lead_vehicle_braking": 60,
+    "fars_left_turn_oncoming": 60,
+    "fars_pedestrian_crossing": 60,
+    "fars_static_obstacle": 60
+  }
+}

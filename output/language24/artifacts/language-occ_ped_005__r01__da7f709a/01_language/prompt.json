@@ -1,0 +1,11 @@
+{
+  "prompt": "A wheelchair user emerges from behind a road barrier on the left and moves into the ego path.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": "left",
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": null,
+    "seed": 4140169189
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "issues": [],
+  "warnings": [],
+  "observed": {
+    "path_values": {
+      "road_topology": "straight_segment",
+      "ego_traffic_space": "curbside_zone",
+      "primary_actor_group": "vulnerable_road_user",
+      "primary_actor_type": "pedestrian",
+      "hazard_interaction": "occluded_emergence",
+      "auxiliary_entity": "parked_truck_occluder",
+      "source_region": "right_side",
+      "target_region": "ego_lane",
+      "anchor_region": "near_front",
+      "visibility": "partially_occluded",
+      "motion_direction": "occluder_to_ego_path",
+      "trigger_event": "occluded_actor_becomes_visible",
+      "ego_required_response": "brake_or_emergency_brake",
+      "risk_level": "moderate"
+    },
+    "nuplan_projection": {
+      "actor_category": "pedestrian",
+      "tracked_object_type": "TrackedObjectType.PEDESTRIAN",
+      "sledge_collection": "pedestrians",
+      "language_actor_detail": "adult_or_unspecified",
+      "language_actor_text": "pedestrian",
+      "occluder_category": "vehicle",
+      "occluder_sledge_collection": "vehicles",
+      "coordinate_frame": "ego_local",
+      "compatible": true,
+      "warnings": []
+    },
+    "language_actor_detail": "adult_or_unspecified",
+    "event_types": [
+      "ego_driving",
+      "actor_occluded",
+      "occluded_actor_becomes_visible",
+      "enter_ego_lane",
+      "conflict_point_approach",
+      "ego_response"
+    ],
+    "parameter_count": 28,
+    "crossing_direction": "occluder_to_ego_path",
+    "crossing_direction_values": [
+      "occluder_to_ego_path"
+    ],
+    "crossing_direction_alternatives": [],
+    "readiness": {
+      "semantic_understanding": "passed",
+      "hierarchical_path": "passed",
+      "nuplan_category_projection": "passed",
+      "parameter_template": "complete",
+      "occluded_pedestrian_contract": "passed",
+      "occluded_pedestrian_contract_issues": [],
+      "kinematic_consistency": "pending_concrete_sampling",
+      "scene_template_ready": true,
+      "sampled_scene_ready": false
+    }
+  }
+}

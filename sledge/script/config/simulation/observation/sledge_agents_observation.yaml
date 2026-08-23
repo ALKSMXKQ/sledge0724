@@ -8,3 +8,4 @@ decel_max: 2.0              # maximum deceleration (positive value) [m/s^2]
 static_detections_types: ["BICYCLE", "BARRIER", "CZONE_SIGN", "TRAFFIC_CONE", "GENERIC_OBJECT"]  # Open-loop detections to include
 minimum_path_length: 30     # [m] The minimum path length to maintain
 radius: 64                 # [m] Only agents within this radius around the ego will be simulated.
+stationary_vehicle_speed_threshold: 0.1  # Keep parked VEHICLE occluders fixed instead of assigning an IDM route.

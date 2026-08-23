@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-08-19T03:24:23.008196+00:00",
+  "python": "3.9.23 | packaged by conda-forge | (main, Jun  4 2025, 17:57:12) \n[GCC 13.3.0]",
+  "executable": "/home16T/home8T_1/leitingting/sledge_workspace/sledge/deployment/sledge_rvae/.venv/bin/python",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+  "imports": {
+    "torch": {
+      "ok": true,
+      "version": "2.3.0+cu121"
+    },
+    "torchvision": {
+      "ok": true,
+      "version": "0.18.0+cu121"
+    },
+    "onnx": {
+      "ok": true,
+      "version": "1.16.1"
+    },
+    "onnxruntime": {
+      "ok": true,
+      "version": "1.18.1"
+    },
+    "yaml": {
+      "ok": true,
+      "version": "6.0.2"
+    },
+    "numpy": {
+      "ok": true,
+      "version": "1.23.4"
+    },
+    "cv2": {
+      "ok": true,
+      "version": "4.9.0"
+    },
+    "nuplan": {
+      "ok": true,
+      "version": "unknown"
+    },
+    "hydra": {
+      "ok": true,
+      "version": "1.3.2"
+    },
+    "pytorch_lightning": {
+      "ok": true,
+      "version": "2.2.1"
+    },
+    "diffusers": {
+      "ok": true,
+      "version": "0.29.2"
+    },
+    "omegaconf": {
+      "ok": true,
+      "version": "2.3.0"
+    },
+    "tensorrt": {
+      "ok": true,
+      "version": "8.6.1"
+    },
+    "deployment.sledge_rvae.python.contract": {
+      "ok": true
+    },
+    "deployment.sledge_rvae.python.model": {
+      "ok": true
+    },
+    "deployment.sledge_rvae.python.comparison": {
+      "ok": true
+    }
+  },
+  "passed": true,
+  "external_target_dependencies": {
+    "cuda_driver_and_gpu": "required for Builder/Engine/performance; unavailable on this host",
+    "tensorrt_cpp": "8.6.1 headers/library/trtexec required on target machine"
+  },
+  "installed_distributions": {
+    "cmake": "3.29.6",
+    "onnx": "1.16.1",
+    "onnxruntime": "1.18.1",
+    "tensorrt": "8.6.1.post1",
+    "tensorrt-bindings": "8.6.1",
+    "tensorrt-libs": "8.6.1",
+    "nvidia-cuda-runtime-cu12": "12.3.101"
+  }
+}

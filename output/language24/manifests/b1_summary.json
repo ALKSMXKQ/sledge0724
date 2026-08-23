@@ -1,0 +1,119 @@
+{
+  "schema_version": "occluded_pedestrian_run_summary_v2_hierarchical",
+  "matrix": {
+    "num_cases": 24,
+    "num_conditions": 12,
+    "conditions": [
+      "language-occ_ped_001",
+      "language-occ_ped_002",
+      "language-occ_ped_003",
+      "language-occ_ped_004",
+      "language-occ_ped_005",
+      "language-occ_ped_006",
+      "language-occ_ped_007",
+      "language-occ_ped_008",
+      "language-occ_ped_009",
+      "language-occ_ped_010",
+      "language-occ_ped_011",
+      "language-occ_ped_012"
+    ],
+    "source_scenario_types": [
+      "behind_pedestrian_on_driveable",
+      "changing_lane_to_right",
+      "crossed_by_vehicle",
+      "following_lane_with_lead",
+      "following_lane_with_slow_lead",
+      "near_multiple_pedestrians",
+      "near_pedestrian_on_crosswalk",
+      "starting_protected_cross_turn",
+      "stationary_at_traffic_light_with_lead",
+      "stopping_at_crosswalk",
+      "stopping_at_stop_sign_no_crosswalk",
+      "traversing_intersection",
+      "unknown"
+    ],
+    "semantic_direction": "occluder_to_ego_path",
+    "axis_counts": {
+      "occluder_type": {
+        "language_derived": 24
+      },
+      "occluder_side": {
+        "left": 6,
+        "right": 6,
+        "sample_once": 12
+      },
+      "pedestrian_speed_mps": {
+        "0.8": 2,
+        "1.2": 2,
+        "1.6": 2,
+        "1.9": 2,
+        "language_derived": 16
+      },
+      "source_scenario_type": {
+        "behind_pedestrian_on_driveable": 1,
+        "changing_lane_to_right": 2,
+        "crossed_by_vehicle": 2,
+        "following_lane_with_lead": 2,
+        "following_lane_with_slow_lead": 2,
+        "near_multiple_pedestrians": 2,
+        "near_pedestrian_on_crosswalk": 2,
+        "starting_protected_cross_turn": 2,
+        "stationary_at_traffic_light_with_lead": 2,
+        "stopping_at_crosswalk": 2,
+        "stopping_at_stop_sign_no_crosswalk": 1,
+        "traversing_intersection": 2,
+        "unknown": 2
+      }
+    }
+  },
+  "num_finished": 23,
+  "num_failed": 1,
+  "construction_mode_counts": {
+    "edit_existing": 23,
+    "synthesize_new": 0
+  },
+  "template_pass_count": 23,
+  "concrete_parameter_sample_ready_count": 23,
+  "sampled_scene_ready_count": 22,
+  "b0": {
+    "schema_version": "occluded_pedestrian_stage_summary_v1",
+    "stage": "B0_construction_base",
+    "num_rows": 24,
+    "num_evaluated": 23,
+    "num_errors": 1,
+    "overall_pass_count": 0,
+    "overall_pass_rate": 0.0,
+    "mean_semantic_satisfaction_rate": 0.0,
+    "check_pass_rates": {
+      "pedestrian_exists": 0.0
+    }
+  },
+  "b1": {
+    "schema_version": "occluded_pedestrian_stage_summary_v1",
+    "stage": "B1_hierarchical_edited",
+    "num_rows": 24,
+    "num_evaluated": 23,
+    "num_errors": 1,
+    "overall_pass_count": 22,
+    "overall_pass_rate": 0.9166666666666666,
+    "mean_semantic_satisfaction_rate": 0.9545454545454546,
+    "check_pass_rates": {
+      "crossing_reaches_ego_lane": 0.9583333333333334,
+      "direction_match": 0.9583333333333334,
+      "interaction_timing_match": 0.9583333333333334,
+      "line_of_sight_occlusion": 0.9583333333333334,
+      "no_actor_occluder_initial_overlap": 0.9166666666666666,
+      "occluder_between_ego_and_actor": 0.9583333333333334,
+      "occluder_clear_of_ego_corridor": 0.9583333333333334,
+      "occluder_exists": 0.9583333333333334,
+      "occluder_stationary": 0.9583333333333334,
+      "pedestrian_exists": 0.9583333333333334,
+      "speed_match": 0.9583333333333334
+    }
+  },
+  "paths": {
+    "b0_cache": "/home16T/home8T_1/leitingting/sledge_workspace/sledge/output/language24/b0_original_cache",
+    "b1_cache": "/home16T/home8T_1/leitingting/sledge_workspace/sledge/output/language24/b1_edited_cache",
+    "artifacts": "/home16T/home8T_1/leitingting/sledge_workspace/sledge/output/language24/artifacts"
+  }
+}

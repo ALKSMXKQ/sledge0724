@@ -1,0 +1,11 @@
+{
+  "prompt": "A girl emerges from behind a parked car at the curb and moves toward the ego path; the side is not specified.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": null,
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": null,
+    "seed": 1318277543
+  }
+}

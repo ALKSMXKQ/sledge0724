@@ -719,14 +719,19 @@ class PrimitiveOps:
         actor_width = float(max(actor_state[AgentIndex.WIDTH], 0.75))
         actor_length = float(max(actor_state[AgentIndex.LENGTH], 0.75))
 
-        # Preserve the source ego speed whenever it can produce the requested
-        # interaction timing. If the source is nearly stationary or too fast,
-        # clamp actor distance to the declared semantic range and synchronize
-        # ego speed as a nuisance parameter. This avoids silently accepting a
-        # geometrically occluded but temporally harmless scene.
+        # The source ego state is immutable in conservative additive mode.
+        # Choose the new actor's longitudinal placement from the source speed;
+        # if that cannot satisfy the timing constraints, reject this source
+        # scene instead of changing ego velocity.
         target_ttc = 0.5 * (float(risk.ttc_range_s[0]) + float(risk.ttc_range_s[1]))
         actor_arrival_time = max(abs(actor_display_y - lane_y) / actor_speed, 0.1)
         input_ego_speed = float(ctx.anchor.get("ego_speed", self._estimate_ego_speed(scene)))
+        if input_ego_speed < 0.5:
+            raise RuntimeError(
+                "source ego speed is too low for an occluded-pedestrian "
+                "interaction without modifying the original ego state: "
+                f"{input_ego_speed:.3f}m/s"
+            )
         risk_min_x = float(risk.longitudinal_distance_range_m[0])
         risk_max_x = float(risk.longitudinal_distance_range_m[1])
         lower_x = max(min_actor_x, severity_floor, risk_min_x)
@@ -767,6 +772,13 @@ class PrimitiveOps:
             include_ego=True,
             use_display_time=False,
         )
+        occupied_display = self._collect_occupied_boxes(
+            scene,
+            ignore=[(ctx.actor_elem_name, ctx.actor_index), (occluder_spec.elem_name, occluder_index)],
+            include_ego=True,
+            use_display_time=True,
+            time_offset_s=frame0_offset_s,
+        )
         actor_box_raw = self._make_aabb_from_values(
             actor_raw["x"], actor_raw["y"], actor_raw["heading"], actor_width, actor_length, margin=0.25
         )
@@ -803,6 +815,34 @@ class PrimitiveOps:
                 else:
                     arx, ary = cur_actor_display_x, actor_display_y
                 cur_actor_raw["x"], cur_actor_raw["y"] = float(arx), float(ary)
+
+            raw_actor_candidate = self._make_aabb_from_values(
+                cur_actor_raw["x"],
+                cur_actor_raw["y"],
+                actor_heading,
+                actor_width,
+                actor_length,
+                margin=0.20,
+            )
+            display_actor_candidate = self._make_aabb_from_values(
+                cur_actor_display_x,
+                actor_display_y,
+                actor_heading,
+                actor_width,
+                actor_length,
+                margin=0.20,
+            )
+            if (
+                self._box_overlaps_any(
+                    raw_actor_candidate,
+                    occupied,
+                )
+                or self._box_overlaps_any(
+                    display_actor_candidate,
+                    occupied_display,
+                )
+            ):
+                continue
 
             for ratio in ratio_candidates:
                 base_x = ratio * cur_actor_display_x
@@ -891,14 +931,42 @@ class PrimitiveOps:
                             continue
                         if self._box_overlaps_any(raw_occ_box, occupied):
                             continue
+                        if self._box_overlaps_any(
+                            display_occ_box,
+                            occupied_display,
+                        ):
+                            continue
 
-                        synchronized_ego_speed = float(cur_actor_display_x / actor_arrival_time)
-                        self._set_ego_longitudinal_speed(scene, synchronized_ego_speed)
-                        ctx.anchor["ego_speed"] = synchronized_ego_speed
+                        ego_arrival_time = float(
+                            cur_actor_display_x
+                            / input_ego_speed
+                        )
+                        arrival_error = abs(
+                            actor_arrival_time
+                            - ego_arrival_time
+                        )
+                        interaction_ttc = max(
+                            actor_arrival_time,
+                            ego_arrival_time,
+                        )
+                        ttc_low, ttc_high = (
+                            risk.ttc_range_s
+                        )
+                        if (
+                            arrival_error > 1.5
+                            or interaction_ttc
+                            < float(ttc_low) - 0.6
+                            or interaction_ttc
+                            > float(ttc_high) + 0.6
+                        ):
+                            continue
+
                         ctx.notes.append(
-                            "synchronize_occluded_interaction: "
-                            f"ego_speed={input_ego_speed:.2f}->{synchronized_ego_speed:.2f}m/s, "
-                            f"actor_arrival={actor_arrival_time:.2f}s, target_ttc={target_ttc:.2f}s"
+                            "preserve_source_ego_interaction: "
+                            f"ego_speed={input_ego_speed:.2f}m/s unchanged, "
+                            f"actor_arrival={actor_arrival_time:.2f}s, "
+                            f"ego_arrival={ego_arrival_time:.2f}s, "
+                            f"target_ttc={target_ttc:.2f}s"
                         )
                         return {
                             "actor_raw": cur_actor_raw,
@@ -908,8 +976,11 @@ class PrimitiveOps:
                             "frame0_time_offset_s": frame0_offset_s,
                             "compensate_frame0_offset": compensate_frame0,
                             "input_ego_speed_mps": input_ego_speed,
-                            "synchronized_ego_speed_mps": synchronized_ego_speed,
+                            "output_ego_speed_mps": input_ego_speed,
+                            "ego_speed_modified": False,
                             "actor_arrival_time_s": actor_arrival_time,
+                            "ego_arrival_time_s": ego_arrival_time,
+                            "arrival_time_error_s": arrival_error,
                             "target_interaction_ttc_s": target_ttc,
                             "ego_corridor_clearance_m": float(corridor_clearance),
                             "occluder_lane_boundary_gap_m": float(occ_inner_edge_gap),
@@ -986,7 +1057,19 @@ class PrimitiveOps:
     @staticmethod
     def _project_state(state: np.ndarray, time_s: float) -> np.ndarray:
         projected = np.asarray(state, dtype=np.float32).copy()
-        speed = float(max(projected[AgentIndex.VELOCITY], 0.0))
+        speed = (
+            float(
+                max(
+                    projected[
+                        AgentIndex.VELOCITY
+                    ],
+                    0.0,
+                )
+            )
+            if projected.size
+            > AgentIndex.VELOCITY
+            else 0.0
+        )
         heading = float(projected[AgentIndex.HEADING])
         projected[AgentIndex.X] = float(projected[AgentIndex.X]) + speed * math.cos(heading) * time_s
         projected[AgentIndex.Y] = float(projected[AgentIndex.Y]) + speed * math.sin(heading) * time_s
@@ -1216,9 +1299,12 @@ class PrimitiveOps:
     @staticmethod
     def _estimate_ego_speed(scene: SledgeVectorRaw) -> float:
         ego_states = np.asarray(scene.ego.states, dtype=np.float32).reshape(-1)
-        if ego_states.size == 0: return 6.0
+        if ego_states.size == 0:
+            return 0.0
         speed = float(np.linalg.norm(ego_states[:2])) if ego_states.size >= 2 else float(abs(ego_states[0]))
-        return float(np.clip(speed, 2.5, 15.0))
+        if not np.isfinite(speed):
+            return 0.0
+        return float(max(speed, 0.0))
 
     @staticmethod
     def _set_ego_longitudinal_speed(scene: SledgeVectorRaw, speed_mps: float) -> None:

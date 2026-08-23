@@ -1,0 +1,5 @@
+# Python-side target inspection components. The production C++ SDK/trtexec is
+# still supplied by the CUDA 12.3 + TensorRT 8.6.1 target installation.
+tensorrt==8.6.1.post1
+nvidia-cuda-runtime-cu12==12.3.101
+cmake==3.29.6

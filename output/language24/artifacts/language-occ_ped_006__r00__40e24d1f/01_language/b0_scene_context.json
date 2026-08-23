@@ -1,0 +1,13 @@
+{
+  "lane_width_m": 3.3530197583604604,
+  "lane_count": 4,
+  "road_curvature": -0.0003010037843224134,
+  "ego_speed_mps": 13.466458048348374,
+  "ego_acceleration_mps2": 0.08364522557463196,
+  "active_line_count": 57,
+  "extraction_notes": [
+    "estimated lane width from local line spacing: 3.353 m",
+    "estimated lane-count compatibility value: 4",
+    "estimated local road curvature: -0.000301 1/m"
+  ]
+}

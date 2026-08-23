@@ -1,0 +1,11 @@
+{
+  "prompt": "A pedestrian is fully hidden by a parked truck at the curb, then abruptly enters the ego lane.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": null,
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": "aggressive",
+    "seed": 1968861237
+  }
+}

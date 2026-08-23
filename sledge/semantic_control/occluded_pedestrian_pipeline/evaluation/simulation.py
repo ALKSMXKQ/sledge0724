@@ -31,7 +31,7 @@ def build_simulation_command(
         "+simulation=sledge_reactive_agents",
         f"planner={planner}",
         "observation=sledge_agents_observation",
-        "+observation.stationary_vehicle_speed_threshold=0.1",
+        "observation.stationary_vehicle_speed_threshold=0.1",
         "scenario_builder=nuplan",
         f"cache.scenario_cache_path={scenario_cache}",
         f"output_dir={simulation_output}",

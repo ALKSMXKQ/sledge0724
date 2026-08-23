@@ -83,6 +83,91 @@ def save_three_stage_comparison(
     return output_png
 
 
+def save_four_stage_comparison(
+    original_scene: Any,
+    edited_scene: Any,
+    diffusion_input_scene: Any,
+    generated_scene: Any,
+    raw_edit_result: Dict[str, Any],
+    processed_edit_result: Dict[str, Any],
+    output_png: Path,
+    *,
+    prompt: str = "",
+    xlim: Tuple[float, float] = (-8.0, 35.0),
+    ylim: Tuple[float, float] = (-15.0, 15.0),
+) -> Path:
+    """Render the four strict audit checkpoints in one image."""
+
+    fig, axes = plt.subplots(
+        1,
+        4,
+        figsize=(29, 6.5),
+        sharex=True,
+        sharey=True,
+    )
+    _draw_scene(
+        axes[0],
+        original_scene,
+        {},
+        title="B0 original",
+    )
+    _draw_scene(
+        axes[1],
+        edited_scene,
+        raw_edit_result,
+        title="B1 additive edit",
+    )
+    _draw_scene(
+        axes[2],
+        diffusion_input_scene,
+        processed_edit_result,
+        title="Diffusion input",
+    )
+    _draw_scene(
+        axes[3],
+        generated_scene,
+        processed_edit_result,
+        title="B2 accepted output",
+    )
+    for ax in axes:
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_aspect(
+            "equal",
+            adjustable="box",
+        )
+        ax.grid(
+            True,
+            linewidth=0.3,
+            alpha=0.6,
+        )
+        ax.set_xlabel(
+            "longitudinal x / m"
+        )
+    axes[0].set_ylabel(
+        "lateral y / m"
+    )
+    if prompt:
+        fig.suptitle(
+            prompt,
+            fontsize=10,
+        )
+    output_png = Path(
+        output_png
+    )
+    output_png.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    fig.tight_layout()
+    fig.savefig(
+        output_png,
+        dpi=180,
+    )
+    plt.close(fig)
+    return output_png
+
+
 def _draw_scene(ax, scene: Any, edit_result: Dict[str, Any], title: str) -> None:
     _draw_lines(ax, scene.lines)
     ego = Rectangle((-2.4, -0.95), 4.8, 1.9, facecolor="#4c78a8", alpha=0.25, edgecolor="#1f4e79")

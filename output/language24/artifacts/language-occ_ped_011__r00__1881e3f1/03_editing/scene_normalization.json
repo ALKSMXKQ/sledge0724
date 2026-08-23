@@ -1,0 +1,59 @@
+{
+  "schema_version": "editable_scene_normalization_v1",
+  "elements": {
+    "vehicles": {
+      "before_states_shape": [
+        46,
+        6
+      ],
+      "before_mask_shape": [
+        46
+      ],
+      "after_states_shape": [
+        47,
+        6
+      ],
+      "after_mask_shape": [
+        47
+      ],
+      "source_rows_forced_active": 46,
+      "insertion_slot_index": 46
+    },
+    "pedestrians": {
+      "before_states_shape": [
+        16,
+        6
+      ],
+      "before_mask_shape": [
+        16
+      ],
+      "after_states_shape": [
+        17,
+        6
+      ],
+      "after_mask_shape": [
+        17
+      ],
+      "source_rows_forced_active": 16,
+      "insertion_slot_index": 16
+    },
+    "static_objects": {
+      "before_states_shape": [
+        34,
+        5
+      ],
+      "before_mask_shape": [
+        34
+      ],
+      "after_states_shape": [
+        35,
+        5
+      ],
+      "after_mask_shape": [
+        35
+      ],
+      "source_rows_forced_active": 34,
+      "insertion_slot_index": 34
+    }
+  }
+}

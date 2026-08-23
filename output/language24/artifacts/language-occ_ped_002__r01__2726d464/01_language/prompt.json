@@ -1,0 +1,11 @@
+{
+  "prompt": "An adult pedestrian steps out from behind a parked car on the left roadside and enters the ego lane at 1.2 m/s.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": "left",
+    "direction": null,
+    "pedestrian_speed_mps": 1.2,
+    "risk_level": null,
+    "seed": 3380931940
+  }
+}

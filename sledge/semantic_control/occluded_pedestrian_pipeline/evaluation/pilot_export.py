@@ -26,6 +26,9 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.stage_compa
     _make_simulation_compatible_vector,
     _match_processed_slot,
 )
+from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.additive_integrity import (
+    evaluate_strict_additive_edit,
+)
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.visualization import _draw_lines
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.geometry_metrics import oriented_box_corners
 from sledge.semantic_control.occluded_pedestrian_pipeline.object_types import (
@@ -58,7 +61,32 @@ def export_b1_simulation_cache(
     """Convert accepted B1 raw scenes and verify their visible nuPlan types."""
 
     run_root = Path(run_root).resolve()
-    cases = _read_jsonl(run_root / "manifests/cases.jsonl")
+    candidate_cases = _read_jsonl(
+        run_root
+        / "manifests/cases.jsonl"
+    )
+    cases = []
+    for case in candidate_cases:
+        label_path = (
+            run_root
+            / "b1_edited_cache"
+            / str(case["sample_id"])
+            / "scenario_label.json"
+        )
+        if not label_path.exists():
+            continue
+        if bool(
+            _read_json(
+                label_path
+            ).get(
+                "accepted",
+                False,
+            )
+        ):
+            cases.append(case)
+    accepted_candidate_count = len(
+        cases
+    )
     if limit is not None:
         cases = cases[: int(limit)]
     sledge_config = build_sledge_config(str(config))
@@ -77,6 +105,27 @@ def export_b1_simulation_cache(
         scene, _ = load_raw_scene(source_dir / "sledge_raw.gz")
         vector, _ = sledge_raw_feature_processing(scene, sledge_config)
         vector = _make_simulation_compatible_vector(vector, scene)
+        original_dir = (
+            run_root
+            / "b0_original_cache"
+            / sample_id
+        )
+        original_scene, _ = load_raw_scene(
+            original_dir
+            / "sledge_raw.gz"
+        )
+        original_vector, _ = (
+            sledge_raw_feature_processing(
+                original_scene,
+                sledge_config,
+            )
+        )
+        original_vector = (
+            _make_simulation_compatible_vector(
+                original_vector,
+                original_scene,
+            )
+        )
 
         ped_index = _match_processed_slot(
             scene.pedestrians,
@@ -92,6 +141,30 @@ def export_b1_simulation_cache(
         if ped_index < 0 or occ_index < 0:
             raise RuntimeError(f"Controlled object was lost during vector conversion: {sample_id}")
 
+        processed_integrity = (
+            evaluate_strict_additive_edit(
+                original_vector,
+                vector,
+                pedestrian_index=(
+                    ped_index
+                ),
+                occluder_index=(
+                    occ_index
+                ),
+                occluder_elem_name=(
+                    occ_element
+                ),
+            )
+        )
+        if not processed_integrity[
+            "overall_pass"
+        ]:
+            raise RuntimeError(
+                "Processed B1 cache is not "
+                "strictly additive for "
+                f"{sample_id}"
+            )
+
         tracked_type_name = tracked_object_type_name(case["occluder_type"])
         overrides = make_type_override(occ_element, occ_index, tracked_type_name)
         out_dir = cache_root / "log" / "sudden_pedestrian_crossing" / sample_id
@@ -99,6 +172,14 @@ def export_b1_simulation_cache(
         vector_path = out_dir / "sledge_vector.gz"
         feature_store.store_computed_feature_to_folder(out_dir / "sledge_vector", vector)
         embed_type_overrides(vector_path, overrides)
+        save_json(
+            out_dir
+            / (
+                "strict_additive_"
+                "integrity.json"
+            ),
+            processed_integrity,
+        )
 
         expected_type = TrackedObjectType[tracked_type_name]
         expected_token = f"{expected_type.value}_{occ_index}"
@@ -129,12 +210,22 @@ def export_b1_simulation_cache(
             "occluder_tracked_object_type": tracked_type_name,
             "direction": str(case["direction"]),
             "pedestrian_speed_mps": float(case["pedestrian_speed_mps"]),
+            "lane_center_y": float(
+                source_label.get(
+                    "lane_center_y",
+                    0.0,
+                )
+            ),
             "pedestrian_index": int(ped_index),
             "occluder_index": int(occ_index),
             "occluder_element": occ_element,
             "controlled_tokens": [f"1_{ped_index}", expected_token],
             "object_type_overrides": overrides,
             "gzip_round_trip_pass": True,
+            (
+                "strict_additive_"
+                "integrity_pass"
+            ): True,
             "preview": str(preview_path) if preview_path else None,
         }
         save_json(out_dir / "scenario_label.json", label)
@@ -154,6 +245,13 @@ def export_b1_simulation_cache(
     }
     payload = {
         "schema_version": "occluded_pedestrian_typed_export_summary_v1",
+        "num_candidates": len(
+            candidate_cases
+        ),
+        "num_rejected_or_failed": (
+            len(candidate_cases)
+            - accepted_candidate_count
+        ),
         "num_requested": len(cases),
         "num_exported": len(rows),
         "num_unique_source_scenes": len({str(case["input_raw"]) for case in cases}),

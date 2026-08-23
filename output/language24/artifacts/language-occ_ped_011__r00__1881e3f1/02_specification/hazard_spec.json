@@ -1,0 +1,275 @@
+{
+  "spec_id": "occluded_pedestrian_480186ed2ec4",
+  "description": "A nuPlan pedestrian starts behind an occluder and moves from the resolved occluder side toward the ego path.",
+  "canonical_type": "Occluded-Pedestrian",
+  "raw_prompt": "A pedestrian partially concealed behind a parked truck on the right begins entering the ego lane.",
+  "road_layer": {
+    "road_topology": "straight",
+    "lane_context": "ego_path",
+    "anchor_type": "ego_future_path",
+    "anchor_region": "front",
+    "num_lanes": null,
+    "lane_width_m": 3.4615001678466797,
+    "has_crosswalk": null,
+    "has_intersection": null,
+    "has_merge_area": null,
+    "require_lane_continuity": true,
+    "require_drivable_route": true,
+    "require_no_broken_boundary": true,
+    "allow_lane_generation": false,
+    "generated_road_layout": "none",
+    "generated_road_radius_m": 14.0
+  },
+  "actor_layer": {
+    "primary_actor": "pedestrian",
+    "actor_role": "crossing_actor",
+    "secondary_actor": "vehicle",
+    "supporting_actors": [
+      "ego_vehicle"
+    ],
+    "allow_actor_insertion": true,
+    "prefer_existing_actor": false,
+    "allow_actor_replacement": true
+  },
+  "object_layer": {
+    "occlusion": {
+      "enabled": true,
+      "occluder_type": "vehicle",
+      "occlusion_position": "between_ego_and_actor",
+      "occlusion_level": "partial"
+    },
+    "static_obstacle": {
+      "enabled": false,
+      "obstacle_type": "none",
+      "obstacle_position": "none",
+      "obstacle_size": "normal"
+    }
+  },
+  "interaction_layer": {
+    "conflict_type": "lateral_conflict",
+    "conflict_direction": "right_to_left",
+    "distance_relation": "close",
+    "speed_relation": "normal",
+    "interaction_goal": "near_miss"
+  },
+  "risk_layer": {
+    "risk_level": "moderate",
+    "ttc_range_s": [
+      2.0,
+      3.0
+    ],
+    "gap_range_m": [
+      19.51092315687312,
+      23.51092315687312
+    ],
+    "lateral_gap_range_m": [
+      1.0,
+      2.0
+    ],
+    "longitudinal_distance_range_m": [
+      10.0,
+      18.0
+    ],
+    "lateral_intrusion_range_m": [
+      0.5,
+      0.9
+    ],
+    "target_actor_speed_mps": 1.0678977724873535,
+    "target_relative_speed_mps": 3.0,
+    "target_decel_range_mps2": [
+      4.54520131068951,
+      6.54520131068951
+    ],
+    "collision_allowed": false
+  },
+  "validation_layer": {
+    "require_actor_match": true,
+    "require_road_context_match": false,
+    "require_conflict_relation": true,
+    "require_direction_match": true,
+    "require_visibility_match": true,
+    "require_lane_validity": true,
+    "require_no_initial_collision": true,
+    "require_ttc_in_range": true,
+    "require_gap_in_range": true
+  },
+  "protection_layer": {
+    "protect_primary_actor": true,
+    "protect_secondary_actor": true,
+    "protect_static_obstacle": true,
+    "protect_conflict_corridor": true,
+    "protect_road_anchor": true
+  },
+  "tags": [
+    "hierarchical_eventframe",
+    "occluded_pedestrian",
+    "edit_existing",
+    "vehicle",
+    "right",
+    "right_to_left",
+    "moderate"
+  ],
+  "debug": {
+    "construction_mode": "edit_existing",
+    "scene_construction": {
+      "mode": "edit_existing",
+      "reason": "no_explicit_global_road_structure",
+      "explicit_global_constraints": {},
+      "local_hazard_constraints": {
+        "primary_actor_type": "pedestrian",
+        "hazard_interaction": "occluded_emergence",
+        "auxiliary_entity": "parked_truck_occluder",
+        "source_region": "right_side",
+        "target_region": "ego_lane",
+        "anchor_region": "near_front",
+        "visibility": "partially_occluded",
+        "motion_direction": "occluder_to_ego_path",
+        "trigger_event": "occluded_actor_becomes_visible",
+        "ego_required_response": "brake_or_emergency_brake",
+        "risk_level": "moderate"
+      },
+      "preserve_from_b0": [
+        "road_geometry",
+        "lane_geometry"
+      ],
+      "hard_preserve_from_b0": [
+        "road_geometry",
+        "lane_geometry",
+        "road_topology"
+      ],
+      "semantic_edit_controls": [
+        "ego_state",
+        "primary_pedestrian",
+        "occluder"
+      ],
+      "elastic_context": [
+        "background_vehicles",
+        "background_pedestrians",
+        "background_static_objects"
+      ],
+      "context_edit_policy": {
+        "mode": "move_then_delete_local_blockers",
+        "preserve_unrelated_context_when_feasible": true,
+        "allow_reposition": true,
+        "allow_velocity_adjustment": false,
+        "allow_removal": true,
+        "removal_scope": "local_occluder_reserved_region_only",
+        "traffic_lights_removable": false,
+        "hazard_constraints_remain_hard": true
+      },
+      "sample_from_template": [
+        "ego_speed_mps",
+        "ego_acceleration_mps2",
+        "ego_distance_to_conflict_m",
+        "occluder_side",
+        "actor_speed_mps",
+        "actor_acceleration_mps2",
+        "actor_start_time_s",
+        "occluder_length_m",
+        "occluder_width_m",
+        "occluder_lateral_offset_m",
+        "reveal_distance_m",
+        "minimum_clearance_m",
+        "braking_deceleration_mps2"
+      ],
+      "derive_from_scene": [
+        "conflict_point_xy",
+        "occluder_position",
+        "actor_initial_position",
+        "actor_heading",
+        "initial_gap_m",
+        "time_to_collision_s"
+      ],
+      "trigger_evidence": [],
+      "source_scene_usage": "road_fixed_elastic_semantic_base_scene",
+      "policy": "explicit_global_road_structure_routes_to_synthesis_v3_move_then_delete"
+    },
+    "road_parameter_source": "b0_scene_context",
+    "ego_state_source": "hierarchical_template_semantic_control",
+    "semantic_direction": "occluder_to_ego_path",
+    "occluder_side": "right",
+    "language_actor_detail": "adult_or_unspecified",
+    "semantic_occluder_type": "parked_truck_occluder",
+    "sampled_parameters": {
+      "seed": 311123467,
+      "semantic_direction": "occluder_to_ego_path",
+      "occluder_side": "right",
+      "concrete_direction": "right_to_left",
+      "language_actor_detail": "adult_or_unspecified",
+      "semantic_occluder_type": "parked_truck_occluder",
+      "executable_occluder_type": "vehicle",
+      "risk_level": "moderate",
+      "lane_width_m": 3.4615001678466797,
+      "lane_count": 4,
+      "road_curvature": -3.383078924665649e-06,
+      "ego_speed_mps": 5.107009164378072,
+      "ego_acceleration_mps2": 0.0,
+      "ego_distance_to_conflict_m": 21.51092315687312,
+      "actor_speed_mps": 1.0678977724873535,
+      "actor_acceleration_mps2": 0.7781720017738701,
+      "actor_start_time_s": 0.9229092246641726,
+      "occluder_longitudinal_m": 7.114652278501167,
+      "occluder_lateral_offset_m": 3.9629419670928607,
+      "occluder_length_m": 10.542369178917129,
+      "occluder_width_m": 2.351346204227996,
+      "reveal_distance_m": 9.618171207762762,
+      "minimum_clearance_m": 0.6537337321738375,
+      "braking_deceleration_mps2": 5.54520131068951,
+      "time_to_collision_s": 4.212039270834695,
+      "construction_mode": "edit_existing",
+      "road_topology": "straight_segment",
+      "road_parameter_source": "b0_scene_context",
+      "ego_state_source": "hierarchical_template_semantic_control",
+      "valid": true,
+      "issues": [],
+      "provenance": {
+        "seed": 311123467,
+        "construction_mode": "edit_existing",
+        "road_parameters": "b0_scene_context",
+        "ego_state": "hierarchical_template_semantic_control",
+        "occluder_side": "control_override",
+        "semantic_direction": "hierarchical_geometric_constraint",
+        "concrete_direction": "derived_from_occluder_side",
+        "pedestrian_speed_mps": "hierarchical_prior",
+        "risk_level": "hierarchical_template"
+      },
+      "concrete_parameter_sample_ready": true,
+      "sampled_scene_ready": false,
+      "actor_heading_definition": "unit_vector(occluder_position, nearest_point_on_ego_path)",
+      "conflict_point_xy": [
+        21.51092315687312,
+        0.0
+      ],
+      "occluder_position_xy": [
+        7.114652278501167,
+        -5.693692051016201
+      ]
+    },
+    "hierarchical_path": {
+      "road_topology": "straight_segment",
+      "ego_traffic_space": "curbside_zone",
+      "primary_actor_group": "vulnerable_road_user",
+      "primary_actor_type": "pedestrian",
+      "hazard_interaction": "occluded_emergence",
+      "auxiliary_entity": "parked_truck_occluder",
+      "source_region": "right_side",
+      "target_region": "ego_lane",
+      "anchor_region": "near_front",
+      "visibility": "partially_occluded",
+      "motion_direction": "occluder_to_ego_path",
+      "trigger_event": "occluded_actor_becomes_visible",
+      "ego_required_response": "brake_or_emergency_brake",
+      "risk_level": "moderate"
+    },
+    "preconstruction_ttc_estimate_s": 4.212039270834695,
+    "ttc_target_range_s": [
+      2.0,
+      3.0
+    ],
+    "ttc_control_source": "risk_level:moderate",
+    "occluder_width_m": 2.351346204227996,
+    "occluder_length_m": 10.542369178917129,
+    "occluder_lateral_offset_m": 3.9629419670928607,
+    "semantic_lane_center_y": 0.0
+  }
+}

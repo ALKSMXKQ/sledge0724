@@ -1,0 +1,6 @@
+# Export/validation environment; TensorRT is supplied by the target system.
+onnx==1.16.1
+onnxruntime==1.18.1
+PyYAML>=6.0,<7
+numpy>=1.23,<2
+

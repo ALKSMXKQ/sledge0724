@@ -73,6 +73,35 @@ def test_occluder_must_occlude_without_entering_ego_corridor() -> None:
     assert unsafe["overall_pass"] is False
 
 
+def test_metrics_use_source_lane_center_and_require_stationary_occluder() -> None:
+    spec = OccludedPedestrianEventFrameAdapter(llm_provider="none").adapt(
+        "A pedestrian hidden behind a construction-zone sign crosses right "
+        "to left at 2.0 m/s."
+    ).hazard_spec
+    scene = _scene(-3.50, np.pi / 2.0)
+    scene.vehicles.states[0, 3:6] = [0.6, 1.0, 0.0]
+    shifted = evaluate_occluded_pedestrian_scene(
+        scene,
+        spec,
+        preferred_pedestrian_index=0,
+        preferred_occluder_index=0,
+        lane_center_y=1.0,
+    )
+    assert shifted["interaction"]["lane_center_y"] == 1.0
+    assert shifted["checks"]["occluder_stationary"] is True
+
+    scene.vehicles.states[0, 5] = 0.5
+    moving = evaluate_occluded_pedestrian_scene(
+        scene,
+        spec,
+        preferred_pedestrian_index=0,
+        preferred_occluder_index=0,
+        lane_center_y=1.0,
+    )
+    assert moving["checks"]["occluder_stationary"] is False
+    assert moving["overall_pass"] is False
+
+
 def test_tangled_diffusion_lines_fail_topology_preservation() -> None:
     reference = SimpleNamespace(
         lines=SledgeVectorElement(

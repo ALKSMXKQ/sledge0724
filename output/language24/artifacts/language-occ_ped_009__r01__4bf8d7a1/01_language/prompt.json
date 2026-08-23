@@ -1,0 +1,11 @@
+{
+  "prompt": "A schoolboy is obscured by a parked van and then steps into the ego lane.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": null,
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": null,
+    "seed": 834341891
+  }
+}

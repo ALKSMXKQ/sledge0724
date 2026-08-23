@@ -1,0 +1,11 @@
+{
+  "prompt": "A pedestrian partially concealed behind a parked truck on the right begins entering the ego lane.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": "right",
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": null,
+    "seed": 3219110657
+  }
+}

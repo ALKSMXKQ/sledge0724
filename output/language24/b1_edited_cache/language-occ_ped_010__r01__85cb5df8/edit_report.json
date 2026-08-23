@@ -1,0 +1,105 @@
+{
+  "prompt_spec": {
+    "raw_prompt": "A runner hidden behind a roadside barrier becomes visible and moves across the ego path.",
+    "normalized_prompt": "A runner hidden behind a roadside barrier becomes visible and moves across the ego path.",
+    "scenario_type": "Occluded-Pedestrian",
+    "city": null,
+    "map_id": null,
+    "occluder_type": "barrier",
+    "side": "left",
+    "moderate_traffic": false,
+    "yielding": false,
+    "blind_spot": false,
+    "pedestrian_emerge": true,
+    "use_existing_occluder_first": false,
+    "insert_occluder_if_missing": true,
+    "severity_level": "moderate",
+    "primary_actor_type": "pedestrian",
+    "crossing_style": "pedestrian_crossing",
+    "pedestrian_speed": 1.2584245540087622,
+    "vehicle_speed": 8.0,
+    "target_speed_mps": 1.2584245540087622,
+    "ttc_min_s": 2.0,
+    "ttc_max_s": 3.0,
+    "conflict_point_x_m": 14.0,
+    "conflict_point_y_m": 0.0,
+    "target_gap_min_m": 20.43942815704322,
+    "target_gap_max_m": 24.43942815704322,
+    "lead_distance_min_m": 20.43942815704322,
+    "lead_distance_max_m": 24.43942815704322,
+    "lateral_speed_min_mps": 0.8,
+    "lateral_speed_max_mps": 2.4,
+    "relative_speed_min_mps": 2.0,
+    "relative_speed_max_mps": 4.0,
+    "target_decel_min_mps2": 5.319470620418036,
+    "target_decel_max_mps2": 7.319470620418036,
+    "spawn_from_roadside": true,
+    "keep_scene_minimal": true,
+    "allow_actor_insertion": true,
+    "prefer_existing_actor": false,
+    "matched_rules": [
+      "semantic_signature:construction_zone/ego_path/pedestrian/crossing_actor/lateral_conflict/left_to_right/occluded/moderate/near_miss"
+    ],
+    "debug": {
+      "hazard_spec_id": "occluded_pedestrian_620a8ccd1f96"
+    }
+  },
+  "occluder_source": "barrier",
+  "occluder_index": 48,
+  "occluder_elem_name": "static_objects",
+  "static_obstacle_index": 48,
+  "pedestrian_index": 28,
+  "primary_actor_type": "pedestrian",
+  "primary_actor_index": 28,
+  "conflict_point_xy": [
+    19.251320362091064,
+    0.0
+  ],
+  "preserved_rois": [
+    {
+      "x_min": 17.876319885253906,
+      "y_min": 6.085254669189453,
+      "x_max": 20.626319885253906,
+      "y_max": 8.835254669189453,
+      "tag": "primary_actor"
+    },
+    {
+      "x_min": 14.746808409690857,
+      "y_min": 3.7000553011894226,
+      "x_max": 20.67561972141266,
+      "y_max": 6.664260685443878,
+      "tag": "occluder"
+    },
+    {
+      "x_min": 14.746808409690857,
+      "y_min": 3.7000553011894226,
+      "x_max": 20.67561972141266,
+      "y_max": 6.664260685443878,
+      "tag": "static_obstacle"
+    },
+    {
+      "x_min": 17.751319885253906,
+      "y_min": -1.5,
+      "x_max": 20.751320362091064,
+      "y_max": 8.960254669189453,
+      "tag": "conflict_corridor"
+    },
+    {
+      "x_min": 17.251320362091064,
+      "y_min": -2.0,
+      "x_max": 21.251320362091064,
+      "y_max": 2.0,
+      "tag": "road_anchor"
+    }
+  ],
+  "removed_vehicle_indices": [],
+  "slowed_vehicle_indices": [],
+  "notes": [
+    "select_road_anchor: {'anchor_type': 'ego_future_path', 'lane_context': 'ego_path', 'x': 14.0, 'y': 1.0, 'lane_y': 1.0, 'ego_speed': 7.700528144836426}",
+    "select_or_spawn_actor: pedestrian/crossing_actor -> pedestrians[28]",
+    "place_actor_laterally: pedestrians[28] at (14.00, 5.10)",
+    "synchronize_occluded_interaction_v2: target_ttc=2.50s, ped_lane_entry=2.50s, ego_speed=7.70->7.70m/s, lane_y=0.00",
+    "clear_occluder_reserved_region: moved_or_deleted=1",
+    "add_or_select_occluder: static_objects[48] type=barrier raw=(17.71,5.18) display=(17.71,5.18); actor display=(19.25,4.82)"
+  ]
+}

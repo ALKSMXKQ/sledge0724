@@ -1,0 +1,11 @@
+{
+  "prompt": "A jogger hidden behind a bus on the right side rushes toward the ego path.",
+  "overrides": {
+    "occluder_type": null,
+    "occluder_side": "right",
+    "direction": null,
+    "pedestrian_speed_mps": null,
+    "risk_level": null,
+    "seed": 437398357
+  }
+}
