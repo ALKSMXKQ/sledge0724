@@ -124,3 +124,39 @@ def read_type_overrides(gz_path: Path) -> Dict[str, Dict[str, str]]:
         for element, entries in raw.items()
         if isinstance(entries, dict)
     }
+
+
+def audit_simulator_roundtrip(
+    gz_path: Path,
+    overrides: Mapping[str, Mapping[str, str]],
+) -> Dict[str, Any]:
+    """Open a gzip through ``SledgeScenario`` and verify visible types."""
+
+    from nuplan.common.actor_state.tracked_objects_types import (
+        TrackedObjectType,
+    )
+    from sledge.simulation.scenarios.sledge_scenario.sledge_scenario import (
+        SledgeScenario,
+    )
+
+    path = Path(gz_path)
+    scenario = SledgeScenario(path.with_suffix(""))
+    detections = scenario.initial_tracked_objects.tracked_objects
+    observed = {
+        str(obj.track_token): str(obj.tracked_object_type.name)
+        for obj in detections
+    }
+    checks: Dict[str, bool] = {}
+    for element_name, entries in overrides.items():
+        for index, type_name in entries.items():
+            expected_type = TrackedObjectType[str(type_name)]
+            token = f"{expected_type.value}_{int(index)}"
+            checks[f"{element_name}:{index}:{type_name}"] = bool(
+                observed.get(token) == str(type_name)
+            )
+    return {
+        "overall_pass": bool(checks and all(checks.values())),
+        "checks": checks,
+        "observed_types": observed,
+        "gzip_path": str(path),
+    }
