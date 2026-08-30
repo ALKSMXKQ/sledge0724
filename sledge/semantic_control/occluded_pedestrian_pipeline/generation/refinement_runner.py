@@ -22,6 +22,9 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_m
 )
 
 
+PROCESSED_SLOT_MAX_WEIGHTED_ERROR = 1e-3
+
+
 class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
     """Run diffusion either without object restoration or with hard protection.
 
@@ -69,6 +72,17 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             template_vector,
             edit_report,
         )
+        if int(processed_report.get("pedestrian_index", -1)) < 0:
+            raise RuntimeError(
+                "Controlled pedestrian was not retained by SLEDGE feature processing: "
+                f"{edited_scene_path}"
+            )
+        if int(processed_report.get("occluder_index", -1)) < 0:
+            raise RuntimeError(
+                "Controlled occluder was not retained by SLEDGE feature processing: "
+                f"{edited_scene_path}"
+            )
+
         self._active_template = template_vector
         self._active_edit_report = processed_report
 
@@ -252,22 +266,62 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         raw_index: int,
         vector_elem: Any,
     ) -> int:
+        """Return the exact processed slot for one controlled raw entity.
+
+        SLEDGE preprocessing sorts and truncates fixed-capacity collections. The
+        historical helper always returned the nearest-looking surviving row,
+        which could silently relabel a background entity if the controlled
+        object had actually been truncated. This implementation fails closed:
+        geometry must match effectively exactly or ``-1`` is returned.
+
+        Velocity is intentionally excluded because ``process_agents`` may clamp
+        it to the configured model maximum. Retained x/y/heading/width/length
+        are copied without semantic transformation and therefore form a stable
+        identity signature at this boundary.
+        """
+
         raw_states = np.asarray(raw_elem.states)
+        if raw_states.ndim == 1:
+            raw_states = raw_states.reshape(1, -1)
         if raw_index < 0 or raw_index >= len(raw_states):
             return -1
-        target = raw_states[raw_index]
+
+        target = np.asarray(raw_states[raw_index], dtype=np.float32).reshape(-1)
         states = np.asarray(vector_elem.states)
-        masks = np.asarray(vector_elem.mask).reshape(-1) >= 0.3
-        valid = np.where(masks)[0]
+        if states.ndim == 1:
+            states = states.reshape(1, -1)
+        masks = np.asarray(vector_elem.mask).reshape(-1)
+        usable = min(len(states), len(masks))
+        if usable <= 0:
+            return -1
+
+        states = states[:usable]
+        masks = masks[:usable]
+        active = (
+            masks.astype(bool)
+            if masks.dtype == np.bool_
+            else masks.astype(np.float32) >= 0.3
+        )
+        valid = np.where(active)[0]
         if not len(valid):
             return -1
+
         width = min(5, states.shape[-1], target.shape[-1])
+        if width <= 0:
+            return -1
         scales = np.asarray(
             [1.0, 1.0, 0.5, 0.25, 0.25],
             dtype=np.float32,
         )[:width]
         errors = np.linalg.norm(
-            (states[valid, :width] - target[:width]) * scales,
+            (states[valid, :width].astype(np.float32) - target[:width]) * scales,
             axis=1,
         )
-        return int(valid[int(np.argmin(errors))])
+        best_position = int(np.argmin(errors))
+        best_error = float(errors[best_position])
+        if (
+            not np.isfinite(best_error)
+            or best_error > PROCESSED_SLOT_MAX_WEIGHTED_ERROR
+        ):
+            return -1
+        return int(valid[best_position])
