@@ -2,7 +2,7 @@
 
 The current B1 editor is semantic-first: it may synchronize ego motion and may
 elastically reposition background actors to make room for the controlled
-occluded-pedestrian interaction.  Therefore the historical requirement that a
+occluded-pedestrian interaction. Therefore the historical requirement that a
 processed B1 vector be *strictly additive* relative to B0 is no longer a valid
 acceptance gate.
 
@@ -10,7 +10,8 @@ This exporter keeps strict-additive integrity as a diagnostic, but the official
 export gate is now the contract that matters for the experiment:
 
 1. B1 was accepted by the canonical raw-scene semantic validator;
-2. the controlled pedestrian and occluder survive SLEDGE feature processing;
+2. the controlled pedestrian and occluder survive SLEDGE feature processing and
+   can be matched by exact geometry rather than nearest-background fallback;
 3. the processed simulation vector still passes the canonical occluded-
    pedestrian semantic metrics; and
 4. the typed ``sledge_vector.gz`` round-trips through ``SledgeScenario``.
@@ -28,6 +29,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch, Polygon as MplPolygon, Rectangle
+import numpy as np
 
 from nuplan.common.actor_state.tracked_objects_types import TrackedObjectType
 from nuplan.planning.training.preprocessing.utils.feature_cache import FeatureCachePickle
@@ -45,7 +47,6 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.metrics imp
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.stage_comparison import (
     _make_simulation_compatible_vector,
-    _match_processed_slot,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.visualization import _draw_lines
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.geometry_metrics import (
@@ -72,6 +73,8 @@ TYPE_COLORS = {
     "BARRIER": "#59a14f",
     "CZONE_SIGN": "#edc948",
 }
+
+PROCESSED_SLOT_MAX_WEIGHTED_ERROR = 1e-3
 
 
 def export_b1_simulation_cache(
@@ -132,7 +135,8 @@ def export_b1_simulation_cache(
             raise RuntimeError(
                 "Controlled object was lost during vector conversion: "
                 f"{sample_id}; pedestrian={ped_index}, "
-                f"occluder={occ_element}[{occ_index}]"
+                f"occluder={occ_element}[{occ_index}]. "
+                "The exporter will not relabel a background object as the controlled hazard."
             )
 
         # ------------------------------------------------------------------
@@ -272,7 +276,7 @@ def export_b1_simulation_cache(
             )
 
         label = {
-            "schema_version": "occluded_pedestrian_typed_simulation_cache_v2",
+            "schema_version": "occluded_pedestrian_typed_simulation_cache_v3",
             "sample_id": sample_id,
             "prompt": str(case.get("prompt", "")),
             "source_raw": str(source_dir / "sledge_raw.gz"),
@@ -290,6 +294,7 @@ def export_b1_simulation_cache(
             "occluder_element": occ_element,
             "controlled_tokens": [f"1_{ped_index}", expected_token],
             "object_type_overrides": overrides,
+            "processed_slot_match_policy": "exact_geometry_or_fail_closed",
             "processed_semantic_pass": True,
             "processed_semantic_satisfaction_rate": float(
                 processed_metrics.get("semantic_satisfaction_rate", 0.0)
@@ -299,7 +304,7 @@ def export_b1_simulation_cache(
             ),
             "strict_additive_integrity_is_gate": False,
             "export_acceptance_policy": (
-                "B1_accepted+controlled_slots_survive+"
+                "B1_accepted+controlled_slots_survive_exact_match+"
                 "processed_canonical_semantics+gzip_round_trip"
             ),
             "gzip_round_trip_pass": True,
@@ -341,9 +346,9 @@ def export_b1_simulation_cache(
     }
 
     payload = {
-        "schema_version": "occluded_pedestrian_typed_export_summary_v2",
+        "schema_version": "occluded_pedestrian_typed_export_summary_v3",
         "acceptance_policy": (
-            "processed_canonical_semantics_and_typed_gzip_round_trip"
+            "exact_controlled_slot_match+processed_canonical_semantics+typed_gzip_round_trip"
         ),
         "num_candidates": len(candidate_cases),
         "num_rejected_or_failed": (
@@ -381,6 +386,66 @@ def export_b1_simulation_cache(
         payload,
     )
     return payload
+
+
+def _match_processed_slot(
+    raw_elem: Any,
+    raw_index: int,
+    vector_elem: Any,
+) -> int:
+    """Match a controlled raw entity to the processed vector, or fail closed.
+
+    SLEDGE preprocessing may sort and truncate collections. x/y/heading/width/
+    length are copied for retained entities, while velocity may be clamped.
+    Therefore identity matching ignores velocity and accepts a candidate only
+    when the geometry signature matches effectively exactly.
+    """
+
+    raw_states = np.asarray(raw_elem.states)
+    if raw_states.ndim == 1:
+        raw_states = raw_states.reshape(1, -1)
+    if raw_index < 0 or raw_index >= len(raw_states):
+        return -1
+
+    target = np.asarray(raw_states[raw_index], dtype=np.float32).reshape(-1)
+    states = np.asarray(vector_elem.states)
+    if states.ndim == 1:
+        states = states.reshape(1, -1)
+    masks = np.asarray(vector_elem.mask).reshape(-1)
+    usable = min(len(states), len(masks))
+    if usable <= 0:
+        return -1
+
+    states = states[:usable]
+    masks = masks[:usable]
+    active = (
+        masks.astype(bool)
+        if masks.dtype == np.bool_
+        else masks.astype(np.float32) >= 0.3
+    )
+    valid = np.where(active)[0]
+    if not len(valid):
+        return -1
+
+    width = min(5, states.shape[-1], target.shape[-1])
+    if width <= 0:
+        return -1
+    scales = np.asarray(
+        [1.0, 1.0, 0.5, 0.25, 0.25],
+        dtype=np.float32,
+    )[:width]
+    errors = np.linalg.norm(
+        (states[valid, :width].astype(np.float32) - target[:width]) * scales,
+        axis=1,
+    )
+    best_position = int(np.argmin(errors))
+    best_error = float(errors[best_position])
+    if (
+        not np.isfinite(best_error)
+        or best_error > PROCESSED_SLOT_MAX_WEIGHTED_ERROR
+    ):
+        return -1
+    return int(valid[best_position])
 
 
 def _save_typed_preview(
