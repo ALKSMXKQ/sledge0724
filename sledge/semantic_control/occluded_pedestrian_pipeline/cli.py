@@ -17,6 +17,9 @@ from sledge.semantic_control.language.hierarchical_pipeline import (
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.pilot_export import (
     export_b1_simulation_cache,
 )
+from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.gzip_manifest import (
+    build_generation_gzip_manifest,
+)
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.simulation import (
     run_simulation,
     summarize_simulation_metrics,
@@ -33,6 +36,9 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.experiment_matrix impo
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_modes import (
     RAW_DIFFUSION_BASELINE,
     SEMANTIC_PROTECTED,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.rvae_reconstruction import (
+    run_rvae_reconstruction,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.language.hierarchical_template_validator import (
     HierarchicalOccludedTemplateValidator,
@@ -237,6 +243,43 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
     )
 
+    reconstruct = sub.add_parser(
+        "reconstruct",
+        help=(
+            "RVAE encode/decode accepted B1 scenes and write raw-candidate "
+            "plus semantic-protected simulation gzip caches"
+        ),
+    )
+    reconstruct.add_argument(
+        "--run-root",
+        type=Path,
+        required=True,
+    )
+    reconstruct.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG,
+    )
+    reconstruct.add_argument(
+        "--autoencoder-checkpoint",
+        type=Path,
+        default=DEFAULT_AE_CHECKPOINT,
+    )
+    reconstruct.add_argument(
+        "--device",
+        default="cuda" if torch.cuda.is_available() else "cpu",
+    )
+    reconstruct.add_argument(
+        "--max-scenes",
+        type=int,
+        default=None,
+    )
+    reconstruct.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="Write the summary without failing if some scenes are rejected",
+    )
+
     evaluate = sub.add_parser(
         "evaluate-b2",
         help="Re-evaluate an existing B2 cache",
@@ -264,6 +307,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         required=True,
     )
+
+    audit_gz = sub.add_parser(
+        "audit-gz",
+        help="Re-open and index all simulator-facing generated gzip stages",
+    )
+    audit_gz.add_argument("--run-root", type=Path, required=True)
+    audit_gz.add_argument("--no-rvae", action="store_true")
+    audit_gz.add_argument("--no-b2", action="store_true")
+    audit_gz.add_argument("--allow-partial", action="store_true")
     export_b1.add_argument(
         "--config",
         type=Path,
@@ -287,6 +339,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-root",
         type=Path,
         required=True,
+    )
+    simulate.add_argument(
+        "--stage",
+        choices=["b1", "rvae", "b2"],
+        default="b2",
+        help="Simulator-facing gzip stage to run",
     )
     simulate.add_argument(
         "--mode",
@@ -372,6 +430,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     all_command.add_argument(
+        "--skip-b1-export",
+        action="store_true",
+    )
+    all_command.add_argument(
+        "--skip-rvae-reconstruction",
+        action="store_true",
+    )
+    all_command.add_argument(
         "--skip-simulation",
         action="store_true",
     )
@@ -422,6 +488,29 @@ def _add_batch_args(parser: argparse.ArgumentParser) -> None:
         "--max-cases",
         type=int,
         default=None,
+    )
+    parser.add_argument(
+        "--target-accepted",
+        type=int,
+        default=None,
+        help="Stop only after this many B1 scenes pass the strict gate",
+    )
+    parser.add_argument(
+        "--candidate-pool-size",
+        type=int,
+        default=None,
+        help="Build this many deterministic candidates before acceptance filtering",
+    )
+    parser.add_argument(
+        "--control-mode",
+        choices=["controlled", "prompt_only"],
+        default="controlled",
+        help="Use explicit overrides or derive all controls from each prompt",
+    )
+    parser.add_argument(
+        "--accept-defaults",
+        action="store_true",
+        help="Compatibility flag; deterministic parser defaults remain enabled",
     )
     parser.add_argument(
         "--no-b1-visuals",
@@ -540,6 +629,13 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     if args.command in {"batch", "all"}:
         config = load_matrix_config(args.matrix_config)
+        if args.candidate_pool_size is not None:
+            config = json.loads(json.dumps(config))
+            profile_cfg = config.get("profiles", {}).get(args.profile)
+            if profile_cfg is None:
+                raise KeyError(f"Unknown profile={args.profile!r}")
+            profile_cfg["total_samples"] = int(args.candidate_pool_size)
+            profile_cfg["samples_per_condition"] = 0
         cases = build_experiment_cases(
             input_root=args.input_root,
             profile=args.profile,
@@ -547,16 +643,65 @@ def main(argv: Optional[List[str]] = None) -> None:
             glob_pattern=args.glob_pattern,
             max_cases=args.max_cases,
         )
+        if args.control_mode == "prompt_only":
+            cases = [
+                replace(
+                    case,
+                    occluder_type=None,
+                    occluder_side="sample_once",
+                    pedestrian_speed_mps=None,
+                    risk_level=None,
+                )
+                for case in cases
+            ]
         pipeline = _pipeline_from_args(args)
+        batch_summary = pipeline.run_batch(
+            cases,
+            target_accepted=args.target_accepted,
+        )
         print(
             json.dumps(
-                pipeline.run_batch(cases),
+                batch_summary,
                 ensure_ascii=False,
                 indent=2,
             )
         )
+        if not batch_summary["target_reached"]:
+            raise RuntimeError(
+                "Candidate pool exhausted before target_accepted was reached: "
+                f"accepted={batch_summary['accepted_count']}, "
+                f"target={batch_summary['target_accepted']}"
+            )
         if args.command == "batch":
             return
+        if not args.skip_b1_export:
+            print(
+                json.dumps(
+                    export_b1_simulation_cache(
+                        args.output_root,
+                        args.config,
+                        limit=args.target_accepted,
+                        save_previews=not args.no_b1_visuals,
+                    ),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        if not args.skip_rvae_reconstruction:
+            print(
+                json.dumps(
+                    run_rvae_reconstruction(
+                        run_root=args.output_root,
+                        config=args.config,
+                        autoencoder_checkpoint=args.autoencoder_checkpoint,
+                        device=args.device,
+                        max_scenes=args.max_refine_scenes,
+                        strict=True,
+                    ),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
         if not args.skip_refine:
             print(
                 json.dumps(
@@ -564,6 +709,19 @@ def main(argv: Optional[List[str]] = None) -> None:
                         args,
                         args.output_root,
                         mode="both",
+                    ),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        if not args.skip_b1_export:
+            print(
+                json.dumps(
+                    build_generation_gzip_manifest(
+                        args.output_root,
+                        require_rvae=not args.skip_rvae_reconstruction,
+                        require_b2=not args.skip_refine,
+                        strict=True,
                     ),
                     ensure_ascii=False,
                     indent=2,
@@ -619,6 +777,23 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
         return
 
+    if args.command == "reconstruct":
+        print(
+            json.dumps(
+                run_rvae_reconstruction(
+                    run_root=args.run_root,
+                    config=args.config,
+                    autoencoder_checkpoint=args.autoencoder_checkpoint,
+                    device=args.device,
+                    max_scenes=args.max_scenes,
+                    strict=not args.allow_partial,
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return
+
     if args.command == "evaluate-b2":
         print(
             json.dumps(
@@ -648,14 +823,34 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
         return
 
+    if args.command == "audit-gz":
+        print(
+            json.dumps(
+                build_generation_gzip_manifest(
+                    args.run_root,
+                    require_rvae=not args.no_rvae,
+                    require_b2=not args.no_b2,
+                    strict=not args.allow_partial,
+                ),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return
+
     if args.command == "simulate":
         layout = RunLayout(args.run_root.resolve())
+        scenario_cache = {
+            "b1": args.run_root.resolve() / "b1_simulation_cache",
+            "rvae": layout.rvae_cache,
+            "b2": layout.b2_cache_for(args.mode),
+        }[args.stage]
         result = run_simulation(
             repo_root=REPO_ROOT,
-            scenario_cache=layout.b2_cache_for(args.mode),
+            scenario_cache=scenario_cache,
             output_manifest=(
                 layout.manifests
-                / f"simulation_launch_{args.mode}.json"
+                / f"simulation_launch_{args.stage}_{args.mode}.json"
             ),
             planner=args.planner,
             limit=args.limit,

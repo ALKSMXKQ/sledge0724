@@ -165,7 +165,15 @@ def export_b1_simulation_cache(
                 f"{sample_id}"
             )
 
-        tracked_type_name = tracked_object_type_name(case["occluder_type"])
+        tracked_type_name = str(
+            source_label.get("occluder_tracked_object_type")
+            or tracked_object_type_name(
+                source_label.get(
+                    "occluder_type",
+                    case.get("occluder_type", "vehicle"),
+                )
+            )
+        )
         overrides = make_type_override(occ_element, occ_index, tracked_type_name)
         out_dir = cache_root / "log" / "sudden_pedestrian_crossing" / sample_id
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -206,13 +214,28 @@ def export_b1_simulation_cache(
             "prompt": str(case.get("prompt", "")),
             "source_raw": str(source_dir / "sledge_raw.gz"),
             "source_scenario_type": str(case.get("source_scenario_type", "unknown")),
-            "occluder_type": str(case["occluder_type"]),
+            "occluder_type": str(
+                source_label.get(
+                    "occluder_type",
+                    case.get("occluder_type", "vehicle"),
+                )
+            ),
             "occluder_tracked_object_type": tracked_type_name,
-            "direction": str(case["direction"]),
-            "pedestrian_speed_mps": float(case["pedestrian_speed_mps"]),
+            "direction": str(
+                source_label.get(
+                    "direction",
+                    case.get("direction", "unknown"),
+                )
+            ),
+            "pedestrian_speed_mps": float(
+                source_label.get(
+                    "pedestrian_speed_mps",
+                    case.get("pedestrian_speed_mps", 0.0),
+                )
+            ),
             "lane_center_y": float(
                 source_label.get(
-                    "lane_center_y",
+                    "semantic_lane_center_y",
                     0.0,
                 )
             ),
