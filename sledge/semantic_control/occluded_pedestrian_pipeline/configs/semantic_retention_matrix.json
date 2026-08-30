@@ -1,6 +1,6 @@
 {
-  "schema_version": "occluded_pedestrian_semantic_retention_matrix_v2",
-  "description": "Balanced parameter templates for three-stage B1/RVAE/diffusion semantic-retention experiments. The natural-language prompt is intentionally a canonical occluded-pedestrian carrier using a parked vehicle, while the executable occluder type is supplied independently by the matrix control override. This keeps the parameter-retention experiment separate from the language-understanding benchmark.",
+  "schema_version": "occluded_pedestrian_semantic_retention_matrix_v3_model_compatible",
+  "description": "Balanced parameter templates for the B1/RVAE/diffusion semantic-retention experiment. The natural-language prompt is a canonical occluded-pedestrian carrier; executable occluder type, side, speed and risk are supplied by matrix controls. Pedestrian speeds are expressed as fractions of the actual SLEDGE/RVAE pedestrian_max_velocity and are materialized by the single three-stage runner before B1 construction, so feature-preprocessing clipping is never misclassified as RVAE/diffusion semantic loss.",
   "diversity_axes": [
     "occluder_type",
     "occluder_side",
@@ -11,6 +11,7 @@
   "semantic_direction": "occluder_to_ego_path",
   "source_sampling": "deterministic_stratified_round_robin",
   "prompt_policy": "canonical_occluded_pedestrian_language_carrier_with_parameter_overrides",
+  "speed_policy": "fraction_of_loaded_model_pedestrian_max_velocity_fail_closed",
   "prompt_templates": [
     "A pedestrian is hidden behind a parked vehicle on the {side} roadside and crosses the ego path from behind the parked vehicle at {speed} m/s.",
     "A pedestrian is occluded by a parked vehicle on the {side} roadside and crosses the ego path from behind it at {speed} m/s.",
@@ -27,9 +28,9 @@
         "left",
         "right"
       ],
-      "pedestrian_speeds_mps": [
-        1.6,
-        2.0
+      "pedestrian_speed_fractions_of_model_max": [
+        0.8,
+        1.0
       ],
       "risk_level": "moderate",
       "samples_per_condition": 1
@@ -47,10 +48,10 @@
         "left",
         "right"
       ],
-      "pedestrian_speeds_mps": [
-        1.2,
-        1.6,
-        2.0
+      "pedestrian_speed_fractions_of_model_max": [
+        0.5,
+        0.7,
+        0.9
       ],
       "risk_level": "mild",
       "samples_per_condition": 1
@@ -68,10 +69,10 @@
         "left",
         "right"
       ],
-      "pedestrian_speeds_mps": [
-        1.6,
-        2.0,
-        2.5
+      "pedestrian_speed_fractions_of_model_max": [
+        0.6,
+        0.8,
+        1.0
       ],
       "risk_level": "moderate",
       "samples_per_condition": 1
@@ -89,10 +90,10 @@
         "left",
         "right"
       ],
-      "pedestrian_speeds_mps": [
-        2.0,
-        2.5,
-        3.0
+      "pedestrian_speed_fractions_of_model_max": [
+        0.8,
+        0.9,
+        1.0
       ],
       "risk_level": "aggressive",
       "samples_per_condition": 1
