@@ -86,6 +86,22 @@ class RunLayout:
     def b2_root(self) -> Path:
         return self.root / "b2_diffusion"
 
+    @property
+    def rvae_root(self) -> Path:
+        return self.root / "rvae_reconstruction"
+
+    @property
+    def rvae_candidate_cache(self) -> Path:
+        return self.rvae_root / "candidate_cache"
+
+    @property
+    def rvae_cache(self) -> Path:
+        return self.rvae_root / "generated_cache"
+
+    @property
+    def rvae_reports(self) -> Path:
+        return self.rvae_root / "reports"
+
     def b2_reports_for(self, mode: str) -> Path:
         return self.b2_root / mode / "reports"
 
@@ -113,6 +129,9 @@ class RunLayout:
         paths = [
             self.b0_cache,
             self.b1_cache,
+            self.rvae_candidate_cache,
+            self.rvae_cache,
+            self.rvae_reports,
             self.artifacts,
             self.manifests,
         ]
@@ -606,14 +625,21 @@ class OccludedPedestrianPipeline:
     def run_batch(
         self,
         cases: Iterable[ExperimentCase],
+        *,
+        target_accepted: Optional[int] = None,
     ) -> Dict[str, Any]:
         cases = list(cases)
+        if target_accepted is not None and int(target_accepted) <= 0:
+            raise ValueError("target_accepted must be positive")
         rows: List[Dict[str, Any]] = []
         b0_metrics_rows: List[Dict[str, Any]] = []
         b1_metrics_rows: List[Dict[str, Any]] = []
         failures: List[Dict[str, Any]] = []
+        attempted_cases: List[ExperimentCase] = []
+        accepted_count = 0
 
         for index, case in enumerate(cases, start=1):
+            attempted_cases.append(case)
             print(f"[{index}/{len(cases)}] {case.sample_id}")
             try:
                 row = self.run_case(case)
@@ -636,6 +662,8 @@ class OccludedPedestrianPipeline:
                     f"b1_pass={row['b1_pass']} "
                     f"ssr={row['b1_semantic_satisfaction_rate']:.3f}"
                 )
+                if bool(row.get("b1_pass", False)):
+                    accepted_count += 1
             except Exception as exc:
                 failure = {
                     **case.to_dict(),
@@ -662,9 +690,15 @@ class OccludedPedestrianPipeline:
                     f"  failed: {type(exc).__name__}: {exc}"
                 )
 
+            if (
+                target_accepted is not None
+                and accepted_count >= int(target_accepted)
+            ):
+                break
+
         _write_jsonl(
             self.layout.manifests / "cases.jsonl",
-            [case.to_dict() for case in cases],
+            [case.to_dict() for case in attempted_cases],
         )
         _write_jsonl(
             self.layout.manifests / "b1_results.jsonl",
@@ -681,7 +715,14 @@ class OccludedPedestrianPipeline:
 
         summary = {
             "schema_version": "occluded_pedestrian_run_summary_v2_hierarchical",
-            "matrix": summarize_case_matrix(cases),
+            "matrix": summarize_case_matrix(attempted_cases),
+            "attempted_count": len(attempted_cases),
+            "accepted_count": accepted_count,
+            "target_accepted": target_accepted,
+            "target_reached": bool(
+                target_accepted is None
+                or accepted_count >= int(target_accepted)
+            ),
             "num_finished": len(rows),
             "num_failed": len(failures),
             "construction_mode_counts": {
@@ -717,6 +758,7 @@ class OccludedPedestrianPipeline:
             "paths": {
                 "b0_cache": str(self.layout.b0_cache),
                 "b1_cache": str(self.layout.b1_cache),
+                "rvae_reconstruction_cache": str(self.layout.rvae_cache),
                 "artifacts": str(self.layout.artifacts),
             },
         }
