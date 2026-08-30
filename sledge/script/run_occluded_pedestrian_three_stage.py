@@ -5,11 +5,12 @@ reuses the hierarchical B1 editor and protected diffusion path, persists an RVAE
 bottleneck reconstruction, validates simulator-readable gzip caches, and keeps
 raw learned-model retention separate from semantic-protected outputs.
 
-Before B1 construction, this runner also resolves pedestrian speed fractions
-against the *actual* SLEDGE/RVAE ``pedestrian_max_velocity`` from the supplied
-configuration. That prevents feature preprocessing from silently clipping an
-out-of-range requested speed and avoids misclassifying representation-limit
-clipping as RVAE/diffusion semantic loss.
+Before B1 construction, this runner resolves pedestrian speed fractions against
+the actual SLEDGE/RVAE ``pedestrian_max_velocity`` and also selects source scenes
+with enough standard preprocessing capacity to retain one controlled pedestrian
+and one controlled occluder.  The latter deliberately preserves the original
+SLEDGE nearest-N preprocessing policy: we change the dataset source scene, not
+the trained model's input-selection rule.
 """
 
 from __future__ import annotations
@@ -17,15 +18,20 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 from dataclasses import replace
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
+import numpy as np
 import torch
 from nuplan.common.actor_state.tracked_objects_types import TrackedObjectType
 
+from sledge.autoencoder.preprocessing.feature_builders.sledge.sledge_utils import (
+    coords_in_frame,
+)
 from sledge.script.build_paired_original_edited_vector_caches import build_sledge_config
-from sledge.semantic_control.io import save_json
+from sledge.semantic_control.io import load_raw_scene, save_json
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.pilot_export import (
     export_b1_simulation_cache,
 )
@@ -42,6 +48,7 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.reconstruct
     run_rvae_reconstruction,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.object_types import (
+    element_name_for_occluder,
     embed_type_overrides,
     make_type_override,
 )
@@ -208,6 +215,23 @@ def main(argv: Optional[List[str]] = None) -> None:
     if not cases:
         raise RuntimeError("Parameter matrix produced no experiment cases")
 
+    cases, source_selection = _select_model_input_compatible_sources(
+        cases,
+        input_root=args.input_root,
+        glob_pattern=args.glob_pattern,
+        model_input_contract=model_input_contract,
+        run_root=run_root,
+    )
+    model_input_contract = dict(model_input_contract)
+    model_input_contract["source_selection"] = source_selection
+    save_json(run_root / "manifests/model_input_contract.json", model_input_contract)
+
+    print(
+        "[MODEL INPUT] source selection: "
+        f"retargeted={source_selection['num_retargeted']} "
+        f"cross_type_fallbacks={source_selection['num_cross_type_fallbacks']}"
+    )
+
     pipeline = OccludedPedestrianPipeline(
         run_root,
         llm_provider=args.llm_provider,
@@ -286,7 +310,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         accepted_ids,
     )
     payload = {
-        "schema_version": "occluded_pedestrian_three_stage_run_v2_model_input_compatible",
+        "schema_version": "occluded_pedestrian_three_stage_run_v3_source_compatible",
         "profiles": profiles,
         "num_parameter_cases": len(cases),
         "num_accepted_b1": len(accepted_ids),
@@ -310,14 +334,7 @@ def _resolve_model_input_matrix(
     run_root: Path,
     source_matrix: Path,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Materialize model-compatible pedestrian speeds before B1 construction.
-
-    ``sledge_raw_feature_processing`` clamps pedestrian velocity to the loaded
-    configuration's ``pedestrian_max_velocity``. The experiment therefore must
-    never request a speed above that representation limit. Profiles may provide
-    either fractions of the loaded maximum or explicit already-compatible m/s
-    values. Any explicit out-of-range speed fails closed.
-    """
+    """Materialize model-compatible pedestrian speeds before B1 construction."""
 
     sledge_config = build_sledge_config(str(config))
     pedestrian_max_velocity = float(sledge_config.pedestrian_max_velocity)
@@ -418,7 +435,7 @@ def _resolve_model_input_matrix(
     save_json(resolved_path, resolved)
 
     contract = {
-        "schema_version": "occluded_pedestrian_model_input_contract_v1",
+        "schema_version": "occluded_pedestrian_model_input_contract_v2_source_capacity",
         "source_config": str(Path(config).resolve()),
         "source_matrix": str(Path(source_matrix).resolve()),
         "resolved_matrix": str(resolved_path),
@@ -431,11 +448,215 @@ def _resolve_model_input_matrix(
         "speed_policy": (
             "materialize_fraction_of_model_max_and_fail_on_out_of_range_explicit_speed"
         ),
-        "processed_slot_policy": "exact_geometry_match_or_fail_closed",
+        "processed_slot_policy": "standard_nearest_N_preprocessing_unchanged",
+        "source_selection_policy": (
+            "reserve_one_standard_preprocessing_slot_for_controlled_pedestrian_and_occluder"
+        ),
         "speed_profiles": speed_profiles,
     }
     save_json(manifest_dir / "model_input_contract.json", contract)
     return resolved, contract
+
+
+def _select_model_input_compatible_sources(
+    cases: List[ExperimentCase],
+    *,
+    input_root: Path,
+    glob_pattern: str,
+    model_input_contract: Mapping[str, Any],
+    run_root: Path,
+) -> Tuple[List[ExperimentCase], Dict[str, Any]]:
+    """Choose B0 scenes with guaranteed nearest-N capacity for the hazard.
+
+    The current RVAE preprocessing keeps the nearest ``num_pedestrians`` and
+    nearest ``num_vehicles`` entities, while static objects have their own fixed
+    capacity.  A controlled object can therefore disappear even when it is
+    inside the spatial frame.  We do not alter that trained preprocessing rule.
+
+    Instead, each experiment condition is assigned a source B0 that has one
+    free slot in the relevant collections *before* the controlled hazard is
+    inserted.  This is conservative but gives an explicit guarantee that the
+    B1 controlled pedestrian/occluder cannot be removed solely by capacity.
+    """
+
+    root = Path(input_root).resolve()
+    frame = list(model_input_contract["frame"])
+    capacities = {
+        "pedestrians": int(model_input_contract["num_pedestrians"]),
+        "vehicles": int(model_input_contract["num_vehicles"]),
+        "static_objects": int(model_input_contract["num_static_objects"]),
+    }
+    if capacities["pedestrians"] < 1:
+        raise ValueError("Model input has no pedestrian capacity")
+
+    all_sources = sorted(Path(input_root).glob(glob_pattern))
+    if not all_sources:
+        raise FileNotFoundError(
+            f"No source scenes matched {glob_pattern!r} under {input_root}"
+        )
+
+    by_type: Dict[str, List[Path]] = {}
+    for path in all_sources:
+        rel = path.resolve().relative_to(root)
+        source_type = _source_scenario_type_from_relative(rel)
+        by_type.setdefault(source_type, []).append(path.resolve())
+
+    cache: Dict[str, Dict[str, Any]] = {}
+    used: set[str] = set()
+    selected_cases: List[ExperimentCase] = []
+    selection_rows: List[Dict[str, Any]] = []
+
+    for case in cases:
+        occ_element = element_name_for_occluder(case.occluder_type or "vehicle")
+        required = {
+            "pedestrians": capacities["pedestrians"] - 1,
+            occ_element: capacities[occ_element] - 1,
+        }
+
+        preferred = list(by_type.get(case.source_scenario_type, []))
+        fallback = [
+            path
+            for source_type, paths in sorted(by_type.items())
+            if source_type != case.source_scenario_type
+            for path in paths
+        ]
+
+        def _ordered(paths: List[Path], salt: str) -> List[Path]:
+            current = Path(case.input_raw).resolve()
+            unique = list(dict.fromkeys(paths))
+            unique.sort(
+                key=lambda path: hashlib.sha1(
+                    f"{case.condition_id}|{salt}|{path}".encode("utf-8")
+                ).hexdigest()
+            )
+            if current in unique:
+                unique.remove(current)
+                unique.insert(0, current)
+            return unique
+
+        chosen: Optional[Path] = None
+        chosen_info: Optional[Dict[str, Any]] = None
+        cross_type_fallback = False
+
+        for candidate_group, is_fallback in (
+            (_ordered(preferred, "same_type"), False),
+            (_ordered(fallback, "cross_type"), True),
+        ):
+            for candidate in candidate_group:
+                key = str(candidate)
+                if key in used:
+                    continue
+                info = cache.get(key)
+                if info is None:
+                    info = _source_capacity_info(candidate, frame)
+                    cache[key] = info
+                if not bool(info.get("readable", False)):
+                    continue
+                if int(info["counts"]["pedestrians"]) > required["pedestrians"]:
+                    continue
+                if int(info["counts"][occ_element]) > required[occ_element]:
+                    continue
+                chosen = candidate
+                chosen_info = info
+                cross_type_fallback = is_fallback
+                break
+            if chosen is not None:
+                break
+
+        if chosen is None or chosen_info is None:
+            raise RuntimeError(
+                "Could not find a standard-preprocessing-capacity-compatible B0 "
+                f"for condition={case.condition_id!r}. Required in-frame counts: "
+                f"pedestrians<={required['pedestrians']}, "
+                f"{occ_element}<={required[occ_element]}. "
+                "The experiment will not change RVAE nearest-N preprocessing."
+            )
+
+        used.add(str(chosen))
+        rel = chosen.relative_to(root)
+        actual_source_type = _source_scenario_type_from_relative(rel)
+        token = hashlib.sha1(str(rel).encode("utf-8")).hexdigest()[:8]
+        sample_prefix = case.sample_id.rsplit("__", 1)[0]
+        selected_case = replace(
+            case,
+            sample_id=f"{sample_prefix}__{token}",
+            input_raw=str(chosen),
+            source_relative_path=str(rel),
+            source_scenario_type=actual_source_type,
+        )
+        selected_cases.append(selected_case)
+
+        original_path = Path(case.input_raw).resolve()
+        selection_rows.append(
+            {
+                "condition_id": case.condition_id,
+                "original_sample_id": case.sample_id,
+                "selected_sample_id": selected_case.sample_id,
+                "original_input_raw": str(original_path),
+                "selected_input_raw": str(chosen),
+                "original_source_scenario_type": case.source_scenario_type,
+                "selected_source_scenario_type": actual_source_type,
+                "retargeted": chosen != original_path,
+                "cross_type_fallback": cross_type_fallback,
+                "occluder_element": occ_element,
+                "in_frame_counts": dict(chosen_info["counts"]),
+                "capacity_limits_before_hazard": required,
+                "model_frame": frame,
+            }
+        )
+
+    payload = {
+        "schema_version": "occluded_pedestrian_model_input_source_selection_v1",
+        "policy": (
+            "standard_preprocessing_unchanged; reserve one capacity slot for "
+            "controlled pedestrian and one for controlled occluder"
+        ),
+        "num_cases": len(selected_cases),
+        "num_retargeted": sum(bool(row["retargeted"]) for row in selection_rows),
+        "num_cross_type_fallbacks": sum(
+            bool(row["cross_type_fallback"]) for row in selection_rows
+        ),
+        "rows": selection_rows,
+    }
+    save_json(run_root / "manifests/model_input_source_selection.json", payload)
+    return selected_cases, payload
+
+
+def _source_capacity_info(path: Path, frame: List[float]) -> Dict[str, Any]:
+    try:
+        scene, _ = load_raw_scene(path)
+        counts = {
+            "pedestrians": _count_states_in_frame(scene.pedestrians.states, frame),
+            "vehicles": _count_states_in_frame(scene.vehicles.states, frame),
+            "static_objects": _count_states_in_frame(scene.static_objects.states, frame),
+        }
+        return {"readable": True, "counts": counts}
+    except Exception as exc:
+        return {
+            "readable": False,
+            "counts": {"pedestrians": 10**9, "vehicles": 10**9, "static_objects": 10**9},
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
+def _count_states_in_frame(states: Any, frame: List[float]) -> int:
+    arr = np.asarray(states)
+    if arr.size == 0:
+        return 0
+    if arr.ndim == 1:
+        arr = arr.reshape(1, -1)
+    if arr.shape[-1] < 2:
+        return 0
+    return int(np.count_nonzero(coords_in_frame(arr[..., :2], frame)))
+
+
+def _source_scenario_type_from_relative(rel: Path) -> str:
+    parts = rel.parts
+    if len(parts) >= 3:
+        return str(parts[-3])
+    if len(parts) >= 2:
+        return str(parts[-2])
+    return "unknown"
 
 
 def _build_profile_cases(
