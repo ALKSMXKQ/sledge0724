@@ -1,27 +1,30 @@
 """One-command occluded-pedestrian B1 -> RVAE -> diffusion experiment.
 
-This is the reproducible entry point for the semantic-retention study.  It
-reuses the existing hierarchical B1 editor and protected diffusion path, adds a
-persisted RVAE bottleneck checkpoint, and validates that every official stage
-is a simulator-readable ``sledge_vector.gz``.
+This is the single supported entry point for the semantic-retention study. It
+reuses the hierarchical B1 editor and protected diffusion path, persists an RVAE
+bottleneck reconstruction, validates simulator-readable gzip caches, and keeps
+raw learned-model retention separate from semantic-protected outputs.
 
-The script deliberately keeps raw RVAE / raw diffusion diagnostics separate
-from semantic-protected outputs.  Raw outputs measure what the learned models
-preserve on their own.  Protected outputs enforce the dangerous-scene contract
-before they are admitted to the final simulation manifest.
+Before B1 construction, this runner also resolves pedestrian speed fractions
+against the *actual* SLEDGE/RVAE ``pedestrian_max_velocity`` from the supplied
+configuration. That prevents feature preprocessing from silently clipping an
+out-of-range requested speed and avoids misclassifying representation-limit
+clipping as RVAE/diffusion semantic loss.
 """
 
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 from dataclasses import replace
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 import torch
 from nuplan.common.actor_state.tracked_objects_types import TrackedObjectType
 
+from sledge.script.build_paired_original_edited_vector_caches import build_sledge_config
 from sledge.semantic_control.io import save_json
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.pilot_export import (
     export_b1_simulation_cache,
@@ -169,6 +172,13 @@ def main(argv: Optional[List[str]] = None) -> None:
     run_root.mkdir(parents=True, exist_ok=True)
 
     matrix = load_matrix_config(args.matrix_config)
+    matrix, model_input_contract = _resolve_model_input_matrix(
+        matrix,
+        config=args.config,
+        run_root=run_root,
+        source_matrix=args.matrix_config,
+    )
+
     profiles = [
         value.strip()
         for value in str(args.profiles).split(",")
@@ -176,6 +186,18 @@ def main(argv: Optional[List[str]] = None) -> None:
     ]
     if not profiles:
         raise ValueError("--profiles must contain at least one profile name")
+
+    print(
+        "[MODEL INPUT] pedestrian_max_velocity="
+        f"{model_input_contract['pedestrian_max_velocity_mps']:.3f} m/s"
+    )
+    for profile in profiles:
+        if profile in model_input_contract["speed_profiles"]:
+            print(
+                f"[MODEL INPUT] {profile}: pedestrian_speeds_mps="
+                f"{model_input_contract['speed_profiles'][profile]['resolved_speeds_mps']}"
+            )
+
     cases = _build_profile_cases(
         input_root=args.input_root,
         matrix=matrix,
@@ -264,10 +286,11 @@ def main(argv: Optional[List[str]] = None) -> None:
         accepted_ids,
     )
     payload = {
-        "schema_version": "occluded_pedestrian_three_stage_run_v1",
+        "schema_version": "occluded_pedestrian_three_stage_run_v2_model_input_compatible",
         "profiles": profiles,
         "num_parameter_cases": len(cases),
         "num_accepted_b1": len(accepted_ids),
+        "model_input_contract": model_input_contract,
         "b1": b1_summary,
         "b1_simulation_export": b1_export,
         "rvae": rvae_summary,
@@ -278,6 +301,141 @@ def main(argv: Optional[List[str]] = None) -> None:
     }
     save_json(run_root / "manifests/three_stage_run_summary.json", payload)
     print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _resolve_model_input_matrix(
+    matrix: Mapping[str, Any],
+    *,
+    config: Path,
+    run_root: Path,
+    source_matrix: Path,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Materialize model-compatible pedestrian speeds before B1 construction.
+
+    ``sledge_raw_feature_processing`` clamps pedestrian velocity to the loaded
+    configuration's ``pedestrian_max_velocity``. The experiment therefore must
+    never request a speed above that representation limit. Profiles may provide
+    either fractions of the loaded maximum or explicit already-compatible m/s
+    values. Any explicit out-of-range speed fails closed.
+    """
+
+    sledge_config = build_sledge_config(str(config))
+    pedestrian_max_velocity = float(sledge_config.pedestrian_max_velocity)
+    if pedestrian_max_velocity <= 0.0:
+        raise ValueError(
+            "Loaded SLEDGE config has non-positive pedestrian_max_velocity="
+            f"{pedestrian_max_velocity}"
+        )
+
+    resolved = deepcopy(dict(matrix))
+    profiles = resolved.get("profiles")
+    if not isinstance(profiles, dict) or not profiles:
+        raise ValueError("Experiment matrix must contain a non-empty profiles object")
+
+    speed_profiles: Dict[str, Any] = {}
+    for profile_name, raw_profile in profiles.items():
+        if not isinstance(raw_profile, dict):
+            raise TypeError(f"Profile {profile_name!r} must be a JSON object")
+        profile = dict(raw_profile)
+        fractions = profile.get("pedestrian_speed_fractions_of_model_max")
+        explicit_speeds = profile.get("pedestrian_speeds_mps")
+
+        if fractions is not None:
+            if not isinstance(fractions, list) or not fractions:
+                raise ValueError(
+                    f"Profile {profile_name!r} has an empty/invalid "
+                    "pedestrian_speed_fractions_of_model_max"
+                )
+            normalized_fractions: List[float] = []
+            concrete: List[float] = []
+            for value in fractions:
+                fraction = float(value)
+                if not 0.0 < fraction <= 1.0:
+                    raise ValueError(
+                        f"Profile {profile_name!r} speed fraction {fraction} "
+                        "must be in (0, 1]"
+                    )
+                speed = round(pedestrian_max_velocity * fraction, 3)
+                if speed <= 0.0 or speed > pedestrian_max_velocity + 1e-9:
+                    raise ValueError(
+                        f"Resolved speed {speed} for profile {profile_name!r} "
+                        "is outside the loaded model input range"
+                    )
+                normalized_fractions.append(fraction)
+                concrete.append(speed)
+
+            concrete = sorted(set(concrete))
+            if not concrete:
+                raise ValueError(f"Profile {profile_name!r} resolved to zero speeds")
+            profile["pedestrian_speeds_mps"] = concrete
+            profile["resolved_pedestrian_max_velocity_mps"] = pedestrian_max_velocity
+            profile["resolved_speed_source"] = "fraction_of_loaded_model_max"
+            profiles[profile_name] = profile
+            speed_profiles[profile_name] = {
+                "source": "fraction_of_loaded_model_max",
+                "fractions": normalized_fractions,
+                "resolved_speeds_mps": concrete,
+            }
+            continue
+
+        if explicit_speeds is None:
+            raise ValueError(
+                f"Profile {profile_name!r} must define either "
+                "pedestrian_speed_fractions_of_model_max or pedestrian_speeds_mps"
+            )
+        if not isinstance(explicit_speeds, list) or not explicit_speeds:
+            raise ValueError(f"Profile {profile_name!r} pedestrian_speeds_mps is empty")
+
+        concrete = sorted(set(float(value) for value in explicit_speeds))
+        bad = [
+            speed
+            for speed in concrete
+            if speed <= 0.0 or speed > pedestrian_max_velocity + 1e-9
+        ]
+        if bad:
+            raise ValueError(
+                f"Profile {profile_name!r} requests pedestrian speeds {bad} "
+                f"outside loaded model limit {pedestrian_max_velocity:.3f} m/s. "
+                "Use pedestrian_speed_fractions_of_model_max instead."
+            )
+        profile["pedestrian_speeds_mps"] = concrete
+        profile["resolved_pedestrian_max_velocity_mps"] = pedestrian_max_velocity
+        profile["resolved_speed_source"] = "explicit_model_compatible_speed"
+        profiles[profile_name] = profile
+        speed_profiles[profile_name] = {
+            "source": "explicit_model_compatible_speed",
+            "fractions": None,
+            "resolved_speeds_mps": concrete,
+        }
+
+    resolved["profiles"] = profiles
+    resolved["resolved_model_pedestrian_max_velocity_mps"] = pedestrian_max_velocity
+    resolved["resolved_speed_policy"] = "model_input_compatible_fail_closed"
+
+    manifest_dir = run_root / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    resolved_path = manifest_dir / "resolved_semantic_retention_matrix.json"
+    save_json(resolved_path, resolved)
+
+    contract = {
+        "schema_version": "occluded_pedestrian_model_input_contract_v1",
+        "source_config": str(Path(config).resolve()),
+        "source_matrix": str(Path(source_matrix).resolve()),
+        "resolved_matrix": str(resolved_path),
+        "frame": list(sledge_config.frame),
+        "num_vehicles": int(sledge_config.num_vehicles),
+        "num_pedestrians": int(sledge_config.num_pedestrians),
+        "num_static_objects": int(sledge_config.num_static_objects),
+        "vehicle_max_velocity_mps": float(sledge_config.vehicle_max_velocity),
+        "pedestrian_max_velocity_mps": pedestrian_max_velocity,
+        "speed_policy": (
+            "materialize_fraction_of_model_max_and_fail_on_out_of_range_explicit_speed"
+        ),
+        "processed_slot_policy": "exact_geometry_match_or_fail_closed",
+        "speed_profiles": speed_profiles,
+    }
+    save_json(manifest_dir / "model_input_contract.json", contract)
+    return resolved, contract
 
 
 def _build_profile_cases(
@@ -341,8 +499,8 @@ def _finalize_diffusion_cache(
     """Reattach visible object type metadata and verify SledgeScenario round-trip.
 
     The learned SLEDGE vector stores geometry in vehicle/static slots but does
-    not intrinsically encode every nuPlan subtype (e.g. BICYCLE).  B1 already
-    stores that subtype as gzip metadata.  Reattaching the same metadata after
+    not intrinsically encode every nuPlan subtype (e.g. BICYCLE). B1 already
+    stores that subtype as gzip metadata. Reattaching the same metadata after
     geometry generation changes no diffusion geometry and makes visualization
     faithful to the requested occluder type.
     """
@@ -367,9 +525,7 @@ def _finalize_diffusion_cache(
             sample_id = edited.parent.name
         if not sample_id:
             continue
-        b1_label_path = (
-            layout.b1_cache / sample_id / "scenario_label.json"
-        )
+        b1_label_path = layout.b1_cache / sample_id / "scenario_label.json"
         if not b1_label_path.exists():
             continue
         b1_label = _read_json(b1_label_path)
@@ -389,11 +545,7 @@ def _finalize_diffusion_cache(
 
         overrides: Dict[str, Dict[str, str]] = {}
         if element in {"vehicles", "static_objects"} and index >= 0:
-            overrides = make_type_override(
-                element,
-                index,
-                tracked_type_name,
-            )
+            overrides = make_type_override(element, index, tracked_type_name)
 
         vector_path = label_path.parent / "sledge_vector.gz"
         try:
@@ -401,15 +553,10 @@ def _finalize_diffusion_cache(
                 raise FileNotFoundError(vector_path)
             if overrides:
                 embed_type_overrides(vector_path, overrides)
-            _assert_sledge_round_trip(
-                label_path.parent / "sledge_vector",
-                overrides,
-            )
+            _assert_sledge_round_trip(label_path.parent / "sledge_vector", overrides)
             semantic_pass = bool(metrics.get("overall_pass", False))
             if require_semantic_pass and not semantic_pass:
-                raise RuntimeError(
-                    "canonical B2 semantic metrics did not pass"
-                )
+                raise RuntimeError("canonical B2 semantic metrics did not pass")
             label.update(
                 {
                     "sample_id": sample_id,
@@ -447,10 +594,7 @@ def _finalize_diffusion_cache(
         "rows": rows,
         "failures": failures,
     }
-    save_json(
-        layout.manifests / f"b2_{mode}_gzip_finalize.json",
-        payload,
-    )
+    save_json(layout.manifests / f"b2_{mode}_gzip_finalize.json", payload)
     if require_semantic_pass and failures:
         raise RuntimeError(
             "Protected B2 gzip/semantic finalization failed for "
@@ -517,21 +661,13 @@ def _build_three_stage_contract(
         b2_data = _read_json(b2_protected_label)
         b2_metric = b2_metrics.get(sample_id, {})
         checks = {
-            "b1_gzip_round_trip": bool(
-                b1_data.get("gzip_round_trip_pass", False)
-            ),
-            "rvae_semantic_pass": bool(
-                rvae_data.get("semantic_pass", False)
-            ),
+            "b1_gzip_round_trip": bool(b1_data.get("gzip_round_trip_pass", False)),
+            "rvae_semantic_pass": bool(rvae_data.get("semantic_pass", False)),
             "rvae_gzip_round_trip": bool(
                 rvae_data.get("gzip_round_trip_pass", False)
             ),
-            "b2_semantic_pass": bool(
-                b2_metric.get("overall_pass", False)
-            ),
-            "b2_gzip_round_trip": bool(
-                b2_data.get("gzip_round_trip_pass", False)
-            ),
+            "b2_semantic_pass": bool(b2_metric.get("overall_pass", False)),
+            "b2_gzip_round_trip": bool(b2_data.get("gzip_round_trip_pass", False)),
         }
         official_pass = all(checks.values())
         row = {
@@ -566,21 +702,19 @@ def _build_three_stage_contract(
                 }
             )
 
+    accepted_list = list(accepted_ids) if not isinstance(accepted_ids, list) else accepted_ids
     payload = {
         "schema_version": "occluded_pedestrian_three_stage_contract_v1",
-        "num_accepted_b1": len(list(accepted_ids)) if not isinstance(accepted_ids, list) else len(accepted_ids),
+        "num_accepted_b1": len(accepted_list),
         "num_complete": len(rows),
         "num_official_pass": sum(bool(row["official_pass"]) for row in rows),
         "num_failures": len(failures),
         "official_stages": [
             "B1_EDITED_SIMULATION_GZ",
             "RVAE_SEMANTIC_PROTECTED_GZ",
-            "B2_SEMANTIC_PROTECTED_DIFFUSION_GZ"
+            "B2_SEMANTIC_PROTECTED_DIFFUSION_GZ",
         ],
-        "diagnostic_stages": [
-            "RVAE_RAW_GZ",
-            "B2_RAW_DIFFUSION_GZ"
-        ],
+        "diagnostic_stages": ["RVAE_RAW_GZ", "B2_RAW_DIFFUSION_GZ"],
         "rows": rows,
         "failures": failures,
     }
