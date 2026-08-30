@@ -83,6 +83,47 @@ def save_three_stage_comparison(
     return output_png
 
 
+def save_generated_gzip_comparison(
+    b1_scene: Any,
+    rvae_scene: Any,
+    diffusion_scene: Any,
+    edit_result: Dict[str, Any],
+    output_png: Path,
+    *,
+    prompt: str = "",
+    xlim: Tuple[float, float] = (-8.0, 35.0),
+    ylim: Tuple[float, float] = (-15.0, 15.0),
+) -> Path:
+    """Render the three simulator-facing gz stages side by side."""
+
+    fig, axes = plt.subplots(1, 3, figsize=(22, 6.5), sharex=True, sharey=True)
+    titles = (
+        "B1 parameter-template edit",
+        "R1 RVAE protected reconstruction",
+        "B2 semantic-protected diffusion",
+    )
+    for axis, scene, title in zip(
+        axes,
+        (b1_scene, rvae_scene, diffusion_scene),
+        titles,
+    ):
+        _draw_scene(axis, scene, edit_result, title=title)
+        axis.set_xlim(xlim)
+        axis.set_ylim(ylim)
+        axis.set_aspect("equal", adjustable="box")
+        axis.grid(True, linewidth=0.3, alpha=0.6)
+        axis.set_xlabel("longitudinal x / m")
+    axes[0].set_ylabel("lateral y / m")
+    if prompt:
+        fig.suptitle(prompt, fontsize=10)
+    output_png = Path(output_png)
+    output_png.parent.mkdir(parents=True, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(output_png, dpi=180)
+    plt.close(fig)
+    return output_png
+
+
 def save_four_stage_comparison(
     original_scene: Any,
     edited_scene: Any,
