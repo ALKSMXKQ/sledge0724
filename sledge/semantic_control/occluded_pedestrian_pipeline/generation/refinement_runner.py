@@ -6,8 +6,6 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-import numpy as np
-
 from sledge.autoencoder.preprocessing.feature_builders.sledge.sledge_feature_processing import (
     sledge_raw_feature_processing,
 )
@@ -19,6 +17,28 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_m
     RAW_DIFFUSION_BASELINE,
     SEMANTIC_PROTECTED,
     SUPPORTED_DIFFUSION_MODES,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.metrics import (
+    evaluate_occluded_pedestrian_scene,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import (
+    HazardSemanticSpec,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.semantic_protection import (
+    audit_protected_semantics,
+    composite_protected_semantics,
+    copy_element_slot,
+    make_simulation_compatible_vector,
+    match_processed_slot,
+    protected_slots,
+    resolve_processed_slots,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.object_types import (
+    audit_simulator_roundtrip,
+    embed_type_overrides,
+    make_type_override,
+    read_type_overrides,
+    tracked_object_type_name,
 )
 
 
@@ -64,6 +84,9 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         report_path = edited_scene_path.parent / "edit_report.json"
         with report_path.open("r", encoding="utf-8") as stream:
             edit_report = json.load(stream)
+        label_path = edited_scene_path.parent / "scenario_label.json"
+        with label_path.open("r", encoding="utf-8") as stream:
+            source_label = json.load(stream)
         processed_report = self._resolve_processed_slots(
             edited_raw,
             template_vector,
@@ -74,6 +97,14 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
         if hasattr(self.alignment_evaluator, "set_reference_scene"):
             self.alignment_evaluator.set_reference_scene(template_vector)
+        if hasattr(self.alignment_evaluator, "set_lane_center_y"):
+            self.alignment_evaluator.set_lane_center_y(
+                float(source_label.get("semantic_lane_center_y", 0.0))
+            )
+        if hasattr(self.alignment_evaluator, "projection_time_s"):
+            self.alignment_evaluator.projection_time_s = float(
+                source_label.get("semantic_projection_time_s", 2.1)
+            )
         # Preferred slot indices are allowed only in the protected comparison.
         # Raw diffusion evaluation must rediscover objects after decoding.
         if (
@@ -110,12 +141,101 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
         vector_path = summary.get("scenario_cache_vector_path")
         if vector_path:
-            label_path = Path(str(vector_path)).parent / "scenario_label.json"
-            if label_path.exists():
-                with label_path.open("r", encoding="utf-8") as stream:
+            generated_path = Path(str(vector_path))
+            generated_label_path = generated_path.parent / "scenario_label.json"
+            semantic_audit: Dict[str, Any] = {}
+            simulator_audit: Dict[str, Any] = {}
+            canonical_metrics: Dict[str, Any] = {}
+            type_overrides: Dict[str, Any] = {}
+            gzip_roundtrip_pass = True
+            if self.semantic_compositing_enabled:
+                tracked_type = source_label.get(
+                    "occluder_tracked_object_type"
+                )
+                if not tracked_type:
+                    tracked_type = tracked_object_type_name(
+                        source_label.get("occluder_type", "vehicle")
+                    )
+                type_overrides = make_type_override(
+                    str(processed_report["occluder_elem_name"]),
+                    int(processed_report["occluder_index"]),
+                    str(tracked_type),
+                )
+                embed_type_overrides(generated_path, type_overrides)
+                roundtrip_scene, _ = load_raw_scene(generated_path)
+                template_sim = make_simulation_compatible_vector(
+                    template_vector,
+                    edited_raw,
+                )
+                semantic_audit = audit_protected_semantics(
+                    roundtrip_scene,
+                    template_sim,
+                    processed_report,
+                )
+                spec_path = (
+                    Path(self.edited_dir).parent
+                    / "artifacts"
+                    / edited_scene_path.parent.name
+                    / "02_specification/hazard_spec.json"
+                )
+                with spec_path.open("r", encoding="utf-8") as stream:
+                    spec = HazardSemanticSpec.from_dict(json.load(stream))
+                canonical_metrics = evaluate_occluded_pedestrian_scene(
+                    roundtrip_scene,
+                    spec,
+                    preferred_pedestrian_index=int(
+                        processed_report["pedestrian_index"]
+                    ),
+                    preferred_occluder_index=int(
+                        processed_report["occluder_index"]
+                    ),
+                    preferred_occluder_elem_name=str(
+                        processed_report["occluder_elem_name"]
+                    ),
+                    projection_time_s=float(
+                        source_label.get("semantic_projection_time_s", 2.1)
+                    ),
+                    lane_center_y=float(
+                        source_label.get("semantic_lane_center_y", 0.0)
+                    ),
+                )
+                simulator_audit = audit_simulator_roundtrip(
+                    generated_path,
+                    type_overrides,
+                )
+                gzip_roundtrip_pass = bool(
+                    semantic_audit["overall_pass"]
+                    and read_type_overrides(generated_path)
+                    == type_overrides
+                    and simulator_audit["overall_pass"]
+                    and canonical_metrics["overall_pass"]
+                )
+                save_json(
+                    out_dir / "semantic_protection_audit.json",
+                    semantic_audit,
+                )
+                save_json(
+                    out_dir / "simulator_roundtrip_audit.json",
+                    simulator_audit,
+                )
+                save_json(
+                    out_dir / "semantic_contract_metrics.json",
+                    canonical_metrics,
+                )
+                if not gzip_roundtrip_pass:
+                    generated_path.unlink(missing_ok=True)
+                    generated_label_path.unlink(missing_ok=True)
+                    raise RuntimeError(
+                        "Protected diffusion gzip failed exact semantic/type "
+                        "round-trip validation"
+                    )
+
+            if generated_label_path.exists():
+                with generated_label_path.open("r", encoding="utf-8") as stream:
                     label = json.load(stream)
                 label.update(
                     {
+                        "sample_id": edited_scene_path.parent.name,
                         "semantic_family": "occluded_pedestrian",
                         "diffusion_mode": self.diffusion_mode,
                         "semantic_vector_compositing": (
@@ -132,9 +252,30 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                             if self.semantic_compositing_enabled
                             else {}
                         ),
+                        "semantic_contract_pass": bool(
+                            summary.get("selected_semantic_pass", False)
+                            and gzip_roundtrip_pass
+                        ),
+                        "gzip_roundtrip_pass": gzip_roundtrip_pass,
+                        "semantic_protection_audit": semantic_audit,
+                        "simulator_roundtrip_audit": simulator_audit,
+                        "semantic_contract_metrics": canonical_metrics,
+                        "object_type_overrides": type_overrides,
                     }
                 )
-                save_json(label_path, label)
+                save_json(generated_label_path, label)
+            summary.update(
+                {
+                    "semantic_contract_pass": bool(
+                        summary.get("selected_semantic_pass", False)
+                        and gzip_roundtrip_pass
+                    ),
+                    "gzip_roundtrip_pass": gzip_roundtrip_pass,
+                    "semantic_protection_audit": semantic_audit,
+                    "simulator_roundtrip_audit": simulator_audit,
+                }
+            )
+            save_json(out_dir / "summary.json", summary)
         return summary
 
     def _attempt_repair(self, *args, **kwargs):
@@ -155,14 +296,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
     @staticmethod
     def _protected_slots(report: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            "road_topology": "all_lines",
-            "pedestrians": int(report.get("pedestrian_index", -1)),
-            "occluder_element": str(
-                report.get("occluder_elem_name", "vehicles")
-            ),
-            "occluder_index": int(report.get("occluder_index", -1)),
-        }
+        return protected_slots(report)
 
     @staticmethod
     def _composite_protected_slots(
@@ -170,32 +304,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         template: Any,
         report: Dict[str, Any],
     ) -> None:
-        vector.lines.states = np.asarray(template.lines.states).copy()
-        vector.lines.mask = np.asarray(template.lines.mask).copy()
-        vector.ego.states = np.asarray(template.ego.states).copy()
-        vector.ego.mask = np.asarray(template.ego.mask).copy()
-
-        pedestrian_index = int(report.get("pedestrian_index", -1))
-        if pedestrian_index >= 0:
-            OccludedPedestrianHalfDenoiseRunner._copy_slot(
-                vector.pedestrians,
-                template.pedestrians,
-                pedestrian_index,
-            )
-
-        occluder_name = str(
-            report.get("occluder_elem_name", "vehicles")
-        )
-        occluder_index = int(report.get("occluder_index", -1))
-        if (
-            occluder_index >= 0
-            and occluder_name in {"vehicles", "static_objects"}
-        ):
-            OccludedPedestrianHalfDenoiseRunner._copy_slot(
-                getattr(vector, occluder_name),
-                getattr(template, occluder_name),
-                occluder_index,
-            )
+        composite_protected_semantics(vector, template, report)
 
     @staticmethod
     def _copy_slot(
@@ -203,20 +312,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         source_elem: Any,
         index: int,
     ) -> None:
-        target_states = np.asarray(target_elem.states)
-        source_states = np.asarray(source_elem.states)
-        target_mask = np.asarray(target_elem.mask)
-        source_mask = np.asarray(source_elem.mask)
-        if index >= len(target_states) or index >= len(source_states):
-            raise IndexError(
-                f"Protected slot {index} is outside decoded/template capacity"
-            )
-        width = min(
-            target_states.shape[-1],
-            source_states.shape[-1],
-        )
-        target_states[index, :width] = source_states[index, :width]
-        target_mask.reshape(-1)[index] = source_mask.reshape(-1)[index]
+        copy_element_slot(target_elem, source_elem, index)
 
     @staticmethod
     def _resolve_processed_slots(
@@ -224,27 +320,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         vector: Any,
         report: Dict[str, Any],
     ) -> Dict[str, Any]:
-        resolved = dict(report)
-        raw_pedestrian_index = int(report.get("pedestrian_index", -1))
-        resolved["pedestrian_index"] = (
-            OccludedPedestrianHalfDenoiseRunner._match_slot(
-                raw.pedestrians,
-                raw_pedestrian_index,
-                vector.pedestrians,
-            )
-        )
-        occluder_name = str(
-            report.get("occluder_elem_name", "vehicles")
-        )
-        raw_occluder_index = int(report.get("occluder_index", -1))
-        resolved["occluder_index"] = (
-            OccludedPedestrianHalfDenoiseRunner._match_slot(
-                getattr(raw, occluder_name),
-                raw_occluder_index,
-                getattr(vector, occluder_name),
-            )
-        )
-        return resolved
+        return resolve_processed_slots(raw, vector, report)
 
     @staticmethod
     def _match_slot(
@@ -252,22 +328,4 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         raw_index: int,
         vector_elem: Any,
     ) -> int:
-        raw_states = np.asarray(raw_elem.states)
-        if raw_index < 0 or raw_index >= len(raw_states):
-            return -1
-        target = raw_states[raw_index]
-        states = np.asarray(vector_elem.states)
-        masks = np.asarray(vector_elem.mask).reshape(-1) >= 0.3
-        valid = np.where(masks)[0]
-        if not len(valid):
-            return -1
-        width = min(5, states.shape[-1], target.shape[-1])
-        scales = np.asarray(
-            [1.0, 1.0, 0.5, 0.25, 0.25],
-            dtype=np.float32,
-        )[:width]
-        errors = np.linalg.norm(
-            (states[valid, :width] - target[:width]) * scales,
-            axis=1,
-        )
-        return int(valid[int(np.argmin(errors))])
+        return match_processed_slot(raw_elem, raw_index, vector_elem)
