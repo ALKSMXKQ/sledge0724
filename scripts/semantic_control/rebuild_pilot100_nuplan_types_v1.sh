@@ -116,25 +116,47 @@ if failed:
 PY
 
 if [[ "${RUN_B2}" == "1" ]]; then
-  echo "[B2] Running strict half-denoise and writing diffusion-input/generated caches"
+  echo "[R1] Running RVAE reconstruction and writing candidate/protected gzip caches"
+  PYTHONUNBUFFERED=1 "${SLEDGE_PYTHON}" \
+    -m sledge.semantic_control.occluded_pedestrian_pipeline.cli reconstruct \
+    --run-root "${OUTPUT_ROOT}" \
+    --config "${SLEDGE_CONFIG}" \
+    --device cuda \
+    --max-scenes 100 \
+    2>&1 | tee "${OUTPUT_ROOT}/logs/03_reconstruct_rvae.log"
+
+  echo "[B2] Running strict semantic-protected half-denoise"
   PYTHONUNBUFFERED=1 "${SLEDGE_PYTHON}" \
     -m sledge.semantic_control.occluded_pedestrian_pipeline.cli refine \
     --run-root "${OUTPUT_ROOT}" \
     --config "${SLEDGE_CONFIG}" \
     --device cuda \
     --max-refine-scenes 100 \
-    2>&1 | tee "${OUTPUT_ROOT}/logs/03_refine_b2.log"
+    --mode semantic_protected \
+    2>&1 | tee "${OUTPUT_ROOT}/logs/04_refine_b2.log"
+
+  PYTHONUNBUFFERED=1 "${SLEDGE_PYTHON}" \
+    -m sledge.semantic_control.occluded_pedestrian_pipeline.cli audit-gz \
+    --run-root "${OUTPUT_ROOT}" \
+    2>&1 | tee "${OUTPUT_ROOT}/logs/05_audit_gz.log"
+
   "${SLEDGE_PYTHON}" - <<'PY'
 import json
 import os
 from pathlib import Path
 
 root = Path(os.environ["PILOT100_OUTPUT_ROOT"])
-summary = json.loads((root / "manifests/b2_summary.json").read_text())
+rvae = json.loads((root / "manifests/rvae_reconstruction_summary.json").read_text())
+b2 = json.loads((root / "manifests/b2_semantic_protected_summary.json").read_text())
+gzip_manifest = json.loads((root / "manifests/generated_gzip_stages.json").read_text())
 checks = {
-    "b2_expected_100": summary["num_expected"] == 100,
-    "b2_generated_100": summary["num_generated"] == 100,
-    "b2_pass_100": summary["generated_pass_count"] == 100,
+    "rvae_expected_100": rvae["num_expected"] == 100,
+    "rvae_generated_100": rvae["num_generated"] == 100,
+    "rvae_semantics_100": rvae["all_semantics_preserved"] is True,
+    "b2_expected_100": b2["num_expected"] == 100,
+    "b2_generated_100": b2["num_generated"] == 100,
+    "b2_pass_100": b2["stage_metrics"]["overall_pass_count"] == 100,
+    "all_gzip_stages_complete": gzip_manifest["all_complete"] is True,
 }
 print(json.dumps({"b2_checks": checks}, indent=2))
 failed = [name for name, passed in checks.items() if not passed]
@@ -149,4 +171,7 @@ fi
 echo "pilot100 rebuild completed successfully"
 echo "Output: ${OUTPUT_ROOT}"
 echo "Simulation cache: ${OUTPUT_ROOT}/b1_simulation_cache"
+echo "RVAE protected cache: ${OUTPUT_ROOT}/rvae_reconstruction/generated_cache"
+echo "Diffusion protected cache: ${OUTPUT_ROOT}/b2_diffusion/semantic_protected/generated_cache"
+echo "Gzip manifest: ${OUTPUT_ROOT}/manifests/generated_gzip_stages.csv"
 echo "Type montage: ${OUTPUT_ROOT}/visualizations/b1_typed_cache/occluder_type_montage.png"
