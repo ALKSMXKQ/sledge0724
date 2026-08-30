@@ -1,6 +1,6 @@
 {
-  "schema_version": "occluded_pedestrian_semantic_retention_matrix_v1",
-  "description": "Balanced parameter templates for three-stage B1/RVAE/diffusion semantic-retention experiments. Run the mild, moderate and aggressive profiles together to cover risk severity without changing the existing matrix builder contract.",
+  "schema_version": "occluded_pedestrian_semantic_retention_matrix_v2",
+  "description": "Balanced parameter templates for three-stage B1/RVAE/diffusion semantic-retention experiments. The natural-language prompt is intentionally a canonical occluded-pedestrian carrier using a parked vehicle, while the executable occluder type is supplied independently by the matrix control override. This keeps the parameter-retention experiment separate from the language-understanding benchmark.",
   "diversity_axes": [
     "occluder_type",
     "occluder_side",
@@ -10,11 +10,12 @@
   ],
   "semantic_direction": "occluder_to_ego_path",
   "source_sampling": "deterministic_stratified_round_robin",
+  "prompt_policy": "canonical_occluded_pedestrian_language_carrier_with_parameter_overrides",
   "prompt_templates": [
-    "A pedestrian hidden behind a {occluder} {side} suddenly emerges toward the ego path at {speed} m/s, creating a {risk} near-miss.",
-    "Create a {risk} occluded-pedestrian scene: the {occluder} {side} blocks ego's line of sight and the pedestrian darts from behind it into the ego lane at {speed} m/s.",
-    "The ego cannot initially see a pedestrian because a {occluder} {side} occludes the view; the pedestrian then rushes toward the ego path at {speed} m/s with {risk} timing.",
-    "Place a {occluder} {side} between ego and a hidden pedestrian. The pedestrian must emerge from the occluder toward the ego trajectory at {speed} m/s and form a {risk} conflict."
+    "A pedestrian is hidden behind a parked vehicle on the {side} roadside and crosses the ego path from behind the parked vehicle at {speed} m/s.",
+    "A pedestrian is occluded by a parked vehicle on the {side} roadside and crosses the ego path from behind it at {speed} m/s.",
+    "A pedestrian behind a parked vehicle on the {side} roadside is hidden from ego and crosses the ego path at {speed} m/s.",
+    "A pedestrian is concealed behind a parked vehicle on the {side} roadside and crosses the ego path at {speed} m/s."
   ],
   "profiles": {
     "retention_smoke": {
