@@ -1,0 +1,100 @@
+{
+  "schema_version": "occluded_pedestrian_semantic_retention_matrix_v1",
+  "description": "Balanced parameter templates for three-stage B1/RVAE/diffusion semantic-retention experiments. Run the mild, moderate and aggressive profiles together to cover risk severity without changing the existing matrix builder contract.",
+  "diversity_axes": [
+    "occluder_type",
+    "occluder_side",
+    "pedestrian_speed_mps",
+    "risk_level",
+    "source_scenario_type"
+  ],
+  "semantic_direction": "occluder_to_ego_path",
+  "source_sampling": "deterministic_stratified_round_robin",
+  "prompt_templates": [
+    "A pedestrian hidden behind a {occluder} {side} suddenly emerges toward the ego path at {speed} m/s, creating a {risk} near-miss.",
+    "Create a {risk} occluded-pedestrian scene: the {occluder} {side} blocks ego's line of sight and the pedestrian darts from behind it into the ego lane at {speed} m/s.",
+    "The ego cannot initially see a pedestrian because a {occluder} {side} occludes the view; the pedestrian then rushes toward the ego path at {speed} m/s with {risk} timing.",
+    "Place a {occluder} {side} between ego and a hidden pedestrian. The pedestrian must emerge from the occluder toward the ego trajectory at {speed} m/s and form a {risk} conflict."
+  ],
+  "profiles": {
+    "retention_smoke": {
+      "occluder_types": [
+        "vehicle",
+        "barrier"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.6,
+        2.0
+      ],
+      "risk_level": "moderate",
+      "samples_per_condition": 1
+    },
+    "retention_mild": {
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.2,
+        1.6,
+        2.0
+      ],
+      "risk_level": "mild",
+      "samples_per_condition": 1
+    },
+    "retention_moderate": {
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        1.6,
+        2.0,
+        2.5
+      ],
+      "risk_level": "moderate",
+      "samples_per_condition": 1
+    },
+    "retention_aggressive": {
+      "occluder_types": [
+        "vehicle",
+        "bicycle",
+        "generic_object",
+        "traffic_cone",
+        "barrier",
+        "czone_sign"
+      ],
+      "occluder_sides": [
+        "left",
+        "right"
+      ],
+      "pedestrian_speeds_mps": [
+        2.0,
+        2.5,
+        3.0
+      ],
+      "risk_level": "aggressive",
+      "samples_per_condition": 1
+    }
+  }
+}
