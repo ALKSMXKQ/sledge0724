@@ -1007,6 +1007,9 @@ def evaluate_b2_cache(
             ),
             projection_time_s=semantic_projection_time_s,
             lane_center_y=semantic_lane_center_y,
+            require_background_realism=(
+                diffusion_mode == SEMANTIC_PROTECTED
+            ),
         )
         metrics["sample_id"] = sample_id
         metrics["diffusion_mode"] = diffusion_mode
@@ -1089,7 +1092,7 @@ def evaluate_b2_cache(
         diffusion_mode=diffusion_mode,
     )
     summary = {
-        "schema_version": "occluded_pedestrian_b2_summary_v2",
+        "schema_version": "occluded_pedestrian_b2_summary_v3_stage_aware_realism",
         "diffusion_mode": diffusion_mode,
         "num_expected": len(expected_ids),
         "num_generated": len(metrics_by_id),
