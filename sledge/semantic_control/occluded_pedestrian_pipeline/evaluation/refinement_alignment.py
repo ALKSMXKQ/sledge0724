@@ -140,8 +140,19 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
         if not topology["passed"]:
             failed.append("road_topology_preservation")
         semantic_total = float(metrics.get("semantic_satisfaction_rate", 0.0))
-        total = semantic_total if topology["passed"] else 0.0
+        canonical_accept = bool(
+            metrics.get("overall_pass", False) and topology["passed"]
+        )
+        # The legacy half-denoise runner ranks/accepts candidates partly through
+        # this scalar ``total``.  Returning a high semantic SSR for a candidate
+        # that failed canonical traffic-realism checks caused false
+        # ``repair_success=True`` results which were later rejected by B2
+        # finalization.  Zero the total unless the exact canonical contract
+        # passes, so candidate selection and finalization use one acceptance
+        # standard.
+        total = semantic_total if canonical_accept else 0.0
         details["road_topology_score"] = float(topology["score"])
+        details["canonical_acceptance_score"] = float(canonical_accept)
         return PromptAlignmentResult(
             total=total,
             details=details,
@@ -155,9 +166,7 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
                 f"generated_p95={topology['generated_to_source_p95_m']:.3f}m, "
                 f"line_ratio={topology['line_point_ratio']:.3f}",
             ],
-            accepted=bool(
-                metrics.get("overall_pass", False) and topology["passed"]
-            ),
+            accepted=canonical_accept,
         )
 
 
