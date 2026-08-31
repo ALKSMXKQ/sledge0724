@@ -14,6 +14,9 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.refinement_
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.stage_comparison import (
     _make_simulation_compatible_vector,
 )
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import (
+    HazardSemanticSpec,
+)
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.primitive_ops import (
     OCCLUDER_SPECS,
 )
@@ -73,11 +76,27 @@ def test_occluder_must_occlude_without_entering_ego_corridor() -> None:
     assert unsafe["overall_pass"] is False
 
 
-def test_metrics_use_source_lane_center_and_require_stationary_occluder() -> None:
-    spec = OccludedPedestrianEventFrameAdapter(llm_provider="none").adapt(
-        "A pedestrian hidden behind a construction-zone sign crosses right "
-        "to left at 2.0 m/s."
-    ).hazard_spec
+def test_metrics_use_source_lane_center_and_require_stationary_parked_occluder() -> None:
+    """Keep metric tests independent from natural-language parsing.
+
+    This case specifically exercises the legacy ``occluder_stationary`` key for
+    the new ``roadside_parked`` mode.  Dynamic adjacent-lane vehicle occluders
+    are intentionally allowed to move and are governed by
+    ``occluder_motion_plausibility`` instead.
+    """
+
+    spec = HazardSemanticSpec(spec_id="parked-occluder-metrics")
+    spec.road_layer.lane_width_m = 3.5
+    spec.actor_layer.primary_actor = "pedestrian"
+    spec.actor_layer.actor_role = "crossing_actor"
+    spec.object_layer.occlusion.enabled = True
+    spec.object_layer.occlusion.occluder_type = "vehicle"
+    spec.interaction_layer.conflict_type = "lateral_conflict"
+    spec.interaction_layer.conflict_direction = "right_to_left"
+    spec.risk_layer.target_actor_speed_mps = 1.6
+    spec.risk_layer.ttc_range_s = (2.0, 3.0)
+    spec.debug["occlusion_mode"] = "roadside_parked"
+
     scene = _scene(-3.50, np.pi / 2.0)
     scene.vehicles.states[0, 3:6] = [0.6, 1.0, 0.0]
     shifted = evaluate_occluded_pedestrian_scene(
@@ -99,6 +118,7 @@ def test_metrics_use_source_lane_center_and_require_stationary_occluder() -> Non
         lane_center_y=1.0,
     )
     assert moving["checks"]["occluder_stationary"] is False
+    assert moving["traffic_realism"]["checks"]["occluder_motion_plausibility"] is False
     assert moving["overall_pass"] is False
 
 
