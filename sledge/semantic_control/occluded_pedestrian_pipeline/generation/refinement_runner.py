@@ -20,20 +20,24 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_m
     SEMANTIC_PROTECTED,
     SUPPORTED_DIFFUSION_MODES,
 )
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.traffic_realism import (
+    sanitize_generated_background,
+)
 
 
 PROCESSED_SLOT_MAX_WEIGHTED_ERROR = 1e-3
 
 
 class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
-    """Run diffusion either without object restoration or with hard protection.
+    """Run diffusion either without restoration or with semantic+realism protection.
 
-    ``raw_diffusion_baseline`` never copies the B1 pedestrian, occluder, road or
-    ego state back into the decoded vector. It is the valid mode for measuring
-    the diffusion model's own dangerous-semantic retention.
+    ``raw_diffusion_baseline`` is untouched and remains the valid measurement of
+    the learned diffusion model itself.
 
-    ``semantic_protected`` preserves the historical protected-compositing
-    behavior and is used only as a controlled comparison.
+    ``semantic_protected`` copies the exact B1 road/ego/controlled hazard back
+    into the decoded vector and then cleans only unrelated generated background
+    actors. This prevents dense stationary pedestrians, cross-lane vehicles and
+    unexplained stopped traffic from polluting the simulator-ready output.
     """
 
     def __init__(self, args) -> None:
@@ -48,6 +52,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             )
         self._active_template = None
         self._active_edit_report: Dict[str, Any] = {}
+        self._active_realism_report: Dict[str, Any] = {}
 
     @property
     def semantic_compositing_enabled(self) -> bool:
@@ -85,6 +90,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
         self._active_template = template_vector
         self._active_edit_report = processed_report
+        self._active_realism_report = {}
 
         if hasattr(self.alignment_evaluator, "set_reference_scene"):
             self.alignment_evaluator.set_reference_scene(template_vector)
@@ -120,6 +126,11 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             if self.semantic_compositing_enabled
             else {}
         )
+        summary["traffic_realism_sanitization"] = (
+            dict(self._active_realism_report)
+            if self.semantic_compositing_enabled
+            else {}
+        )
         save_json(out_dir / "summary.json", summary)
 
         vector_path = summary.get("scenario_cache_vector_path")
@@ -146,9 +157,16 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                             if self.semantic_compositing_enabled
                             else {}
                         ),
+                        "traffic_realism_sanitization": (
+                            dict(self._active_realism_report)
+                            if self.semantic_compositing_enabled
+                            else {}
+                        ),
                     }
                 )
                 save_json(label_path, label)
+
+        self._active_realism_report = {}
         return summary
 
     def _attempt_repair(self, *args, **kwargs):
@@ -160,7 +178,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             self.semantic_compositing_enabled
             and self._active_template is not None
         ):
-            self._composite_protected_slots(
+            self._active_realism_report = self._composite_protected_slots(
                 vector,
                 self._active_template,
                 self._active_edit_report,
@@ -183,7 +201,9 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         vector: Any,
         template: Any,
         report: Dict[str, Any],
-    ) -> None:
+    ) -> Dict[str, Any]:
+        """Restore the hazard exactly, then sanitize only generated background."""
+
         vector.lines.states = np.asarray(template.lines.states).copy()
         vector.lines.mask = np.asarray(template.lines.mask).copy()
         vector.ego.states = np.asarray(template.ego.states).copy()
@@ -210,6 +230,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                 getattr(template, occluder_name),
                 occluder_index,
             )
+
+        return sanitize_generated_background(
+            vector,
+            protected_pedestrian_index=pedestrian_index,
+            protected_occluder_element=occluder_name,
+            protected_occluder_index=occluder_index,
+        )
 
     @staticmethod
     def _copy_slot(
@@ -268,16 +295,10 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
     ) -> int:
         """Return the exact processed slot for one controlled raw entity.
 
-        SLEDGE preprocessing sorts and truncates fixed-capacity collections. The
-        historical helper always returned the nearest-looking surviving row,
-        which could silently relabel a background entity if the controlled
-        object had actually been truncated. This implementation fails closed:
-        geometry must match effectively exactly or ``-1`` is returned.
-
-        Velocity is intentionally excluded because ``process_agents`` may clamp
-        it to the configured model maximum. Retained x/y/heading/width/length
-        are copied without semantic transformation and therefore form a stable
-        identity signature at this boundary.
+        SLEDGE preprocessing sorts and truncates fixed-capacity collections.  We
+        fail closed: x/y/heading/width/length must match effectively exactly or
+        ``-1`` is returned.  Velocity is intentionally excluded because feature
+        processing may clamp it to the configured model maximum.
         """
 
         raw_states = np.asarray(raw_elem.states)
@@ -286,7 +307,10 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         if raw_index < 0 or raw_index >= len(raw_states):
             return -1
 
-        target = np.asarray(raw_states[raw_index], dtype=np.float32).reshape(-1)
+        target = np.asarray(
+            raw_states[raw_index],
+            dtype=np.float32,
+        ).reshape(-1)
         states = np.asarray(vector_elem.states)
         if states.ndim == 1:
             states = states.reshape(1, -1)
@@ -314,7 +338,11 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             dtype=np.float32,
         )[:width]
         errors = np.linalg.norm(
-            (states[valid, :width].astype(np.float32) - target[:width]) * scales,
+            (
+                states[valid, :width].astype(np.float32)
+                - target[:width]
+            )
+            * scales,
             axis=1,
         )
         best_position = int(np.argmin(errors))
