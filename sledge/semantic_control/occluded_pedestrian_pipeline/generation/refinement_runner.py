@@ -20,17 +20,27 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_m
     SEMANTIC_PROTECTED,
     SUPPORTED_DIFFUSION_MODES,
 )
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import (
+    HazardSemanticSpec,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.traffic_realism import (
+    sanitize_generated_background,
+)
+
+
+PROCESSED_SLOT_MAX_WEIGHTED_ERROR = 1e-3
 
 
 class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
-    """Run diffusion either without object restoration or with hard protection.
+    """Run diffusion either without restoration or with semantic+realism protection.
 
-    ``raw_diffusion_baseline`` never copies the B1 pedestrian, occluder, road or
-    ego state back into the decoded vector. It is the valid mode for measuring
-    the diffusion model's own dangerous-semantic retention.
+    ``raw_diffusion_baseline`` is untouched and remains the valid measurement of
+    the learned diffusion model itself.
 
-    ``semantic_protected`` preserves the historical protected-compositing
-    behavior and is used only as a controlled comparison.
+    ``semantic_protected`` copies the exact B1 road/ego/controlled hazard back
+    into the decoded vector and then cleans only unrelated generated background
+    actors. This prevents dense stationary pedestrians, cross-lane vehicles and
+    unexplained stopped traffic from polluting the simulator-ready output.
     """
 
     def __init__(self, args) -> None:
@@ -45,6 +55,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             )
         self._active_template = None
         self._active_edit_report: Dict[str, Any] = {}
+        self._active_realism_report: Dict[str, Any] = {}
 
     @property
     def semantic_compositing_enabled(self) -> bool:
@@ -69,27 +80,76 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             template_vector,
             edit_report,
         )
+        if int(processed_report.get("pedestrian_index", -1)) < 0:
+            raise RuntimeError(
+                "Controlled pedestrian was not retained by SLEDGE feature processing: "
+                f"{edited_scene_path}"
+            )
+        if int(processed_report.get("occluder_index", -1)) < 0:
+            raise RuntimeError(
+                "Controlled occluder was not retained by SLEDGE feature processing: "
+                f"{edited_scene_path}"
+            )
+
         self._active_template = template_vector
         self._active_edit_report = processed_report
+        self._active_realism_report = {}
+
+        # Bind evaluation to the exact executable spec saved after B1
+        # construction.  The matrix prompt is only a language carrier and may
+        # say "parked vehicle" even when overrides request a barrier or a moving
+        # adjacent-lane vehicle.
+        sample_id = edited_scene_path.parent.name
+        run_root = edited_scene_path.parents[2]
+        spec_path = (
+            run_root
+            / "artifacts"
+            / sample_id
+            / "02_specification"
+            / "hazard_spec.json"
+        )
+        if (
+            spec_path.exists()
+            and hasattr(self.alignment_evaluator, "set_reference_spec")
+        ):
+            with spec_path.open("r", encoding="utf-8") as stream:
+                self.alignment_evaluator.set_reference_spec(
+                    HazardSemanticSpec.from_dict(json.load(stream))
+                )
+
+        label_path = edited_scene_path.parent / "scenario_label.json"
+        if label_path.exists():
+            with label_path.open("r", encoding="utf-8") as stream:
+                source_label = json.load(stream)
+            if hasattr(self.alignment_evaluator, "set_lane_center_y"):
+                self.alignment_evaluator.set_lane_center_y(
+                    float(source_label.get("semantic_lane_center_y", 0.0))
+                )
+            if hasattr(self.alignment_evaluator, "set_projection_time_s"):
+                self.alignment_evaluator.set_projection_time_s(
+                    float(source_label.get("semantic_projection_time_s", 2.1))
+                )
 
         if hasattr(self.alignment_evaluator, "set_reference_scene"):
             self.alignment_evaluator.set_reference_scene(template_vector)
-        # Preferred slot indices are allowed only in the protected comparison.
-        # Raw diffusion evaluation must rediscover objects after decoding.
-        if (
-            self.semantic_compositing_enabled
-            and hasattr(self.alignment_evaluator, "set_preferred_slots")
-        ):
-            self.alignment_evaluator.set_preferred_slots(
-                int(processed_report.get("pedestrian_index", -1)),
-                int(processed_report.get("occluder_index", -1)),
-                str(
-                    processed_report.get(
-                        "occluder_elem_name",
-                        "vehicles",
-                    )
-                ),
-            )
+
+        # Raw mode must rediscover generated actors.  Protected mode receives
+        # preferred controlled slots and thereby enables the full generated-
+        # background realism gate in the alignment evaluator.
+        if self.semantic_compositing_enabled:
+            if hasattr(self.alignment_evaluator, "set_preferred_slots"):
+                self.alignment_evaluator.set_preferred_slots(
+                    int(processed_report.get("pedestrian_index", -1)),
+                    int(processed_report.get("occluder_index", -1)),
+                    str(
+                        processed_report.get(
+                            "occluder_elem_name",
+                            "vehicles",
+                        )
+                    ),
+                )
+        elif hasattr(self.alignment_evaluator, "clear_preferred_slots"):
+            self.alignment_evaluator.clear_preferred_slots()
 
         try:
             summary = super().run_one(edited_scene_path, out_dir, index)
@@ -103,6 +163,11 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         )
         summary["protected_slots"] = (
             self._protected_slots(processed_report)
+            if self.semantic_compositing_enabled
+            else {}
+        )
+        summary["traffic_realism_sanitization"] = (
+            dict(self._active_realism_report)
             if self.semantic_compositing_enabled
             else {}
         )
@@ -121,7 +186,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         "semantic_vector_compositing": (
                             self.semantic_compositing_enabled
                         ),
-                        "semantic_projection_time_s": 2.1,
+                        "semantic_projection_time_s": float(
+                            getattr(
+                                self.alignment_evaluator,
+                                "projection_time_s",
+                                2.1,
+                            )
+                        ),
                         "road_topology_lock": (
                             "exact_b1_lines"
                             if self.semantic_compositing_enabled
@@ -132,9 +203,16 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                             if self.semantic_compositing_enabled
                             else {}
                         ),
+                        "traffic_realism_sanitization": (
+                            dict(self._active_realism_report)
+                            if self.semantic_compositing_enabled
+                            else {}
+                        ),
                     }
                 )
                 save_json(label_path, label)
+
+        self._active_realism_report = {}
         return summary
 
     def _attempt_repair(self, *args, **kwargs):
@@ -146,7 +224,7 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             self.semantic_compositing_enabled
             and self._active_template is not None
         ):
-            self._composite_protected_slots(
+            self._active_realism_report = self._composite_protected_slots(
                 vector,
                 self._active_template,
                 self._active_edit_report,
@@ -169,7 +247,9 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         vector: Any,
         template: Any,
         report: Dict[str, Any],
-    ) -> None:
+    ) -> Dict[str, Any]:
+        """Restore the hazard exactly, then sanitize only generated background."""
+
         vector.lines.states = np.asarray(template.lines.states).copy()
         vector.lines.mask = np.asarray(template.lines.mask).copy()
         vector.ego.states = np.asarray(template.ego.states).copy()
@@ -196,6 +276,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                 getattr(template, occluder_name),
                 occluder_index,
             )
+
+        return sanitize_generated_background(
+            vector,
+            protected_pedestrian_index=pedestrian_index,
+            protected_occluder_element=occluder_name,
+            protected_occluder_index=occluder_index,
+        )
 
     @staticmethod
     def _copy_slot(
@@ -252,22 +339,63 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         raw_index: int,
         vector_elem: Any,
     ) -> int:
+        """Return the exact processed slot for one controlled raw entity.
+
+        SLEDGE preprocessing sorts and truncates fixed-capacity collections.  We
+        fail closed: x/y/heading/width/length must match effectively exactly or
+        ``-1`` is returned.  Velocity is intentionally excluded because feature
+        processing may clamp it to the configured model maximum.
+        """
+
         raw_states = np.asarray(raw_elem.states)
+        if raw_states.ndim == 1:
+            raw_states = raw_states.reshape(1, -1)
         if raw_index < 0 or raw_index >= len(raw_states):
             return -1
-        target = raw_states[raw_index]
+
+        target = np.asarray(
+            raw_states[raw_index],
+            dtype=np.float32,
+        ).reshape(-1)
         states = np.asarray(vector_elem.states)
-        masks = np.asarray(vector_elem.mask).reshape(-1) >= 0.3
-        valid = np.where(masks)[0]
+        if states.ndim == 1:
+            states = states.reshape(1, -1)
+        masks = np.asarray(vector_elem.mask).reshape(-1)
+        usable = min(len(states), len(masks))
+        if usable <= 0:
+            return -1
+
+        states = states[:usable]
+        masks = masks[:usable]
+        active = (
+            masks.astype(bool)
+            if masks.dtype == np.bool_
+            else masks.astype(np.float32) >= 0.3
+        )
+        valid = np.where(active)[0]
         if not len(valid):
             return -1
+
         width = min(5, states.shape[-1], target.shape[-1])
+        if width <= 0:
+            return -1
         scales = np.asarray(
             [1.0, 1.0, 0.5, 0.25, 0.25],
             dtype=np.float32,
         )[:width]
         errors = np.linalg.norm(
-            (states[valid, :width] - target[:width]) * scales,
+            (
+                states[valid, :width].astype(np.float32)
+                - target[:width]
+            )
+            * scales,
             axis=1,
         )
-        return int(valid[int(np.argmin(errors))])
+        best_position = int(np.argmin(errors))
+        best_error = float(errors[best_position])
+        if (
+            not np.isfinite(best_error)
+            or best_error > PROCESSED_SLOT_MAX_WEIGHTED_ERROR
+        ):
+            return -1
+        return int(valid[best_position])
