@@ -1,4 +1,4 @@
-"""Canonical danger-semantic + traffic-realism metrics for occluded pedestrians."""
+"""Canonical danger-semantic + stage-aware traffic-realism metrics."""
 from __future__ import annotations
 
 import math
@@ -32,6 +32,27 @@ ARRIVAL_TIME_TOLERANCE_S = 1.50
 CROSSING_HORIZON_S = 6.0
 OCCLUDER_STATIONARY_SPEED_MPS = 0.10
 
+# Traffic realism is intentionally split into two contracts.
+#
+# Controlled hazard realism applies to every accepted B1/protected scene.  It
+# answers whether the *injected hazard itself* is physically plausible.
+# Background realism applies as a hard gate only to generated protected outputs
+# (RVAE/diffusion), because B1 keeps a genuine nuPlan background where queues,
+# crowds and stopped traffic may be legitimate source-scene content.
+CONTROLLED_TRAFFIC_REALISM_KEYS = (
+    "occluder_lane_relation",
+    "occluder_heading_alignment",
+    "occluder_motion_plausibility",
+    "pedestrian_emergence_geometry",
+    "reveal_time",
+)
+BACKGROUND_TRAFFIC_REALISM_KEYS = (
+    "background_pedestrian_density",
+    "background_vehicle_motion",
+    "no_cross_lane_vehicle_pose",
+    "background_static_lane_safety",
+)
+
 
 def evaluate_occluded_pedestrian_scene(
     scene: Any,
@@ -42,14 +63,26 @@ def evaluate_occluded_pedestrian_scene(
     preferred_occluder_elem_name: str = "vehicles",
     projection_time_s: float = 0.0,
     lane_center_y: Optional[float] = None,
+    require_background_realism: bool = False,
 ) -> Dict[str, Any]:
-    """Evaluate Level-1 danger semantics and Level-2 traffic realism.
+    """Evaluate danger semantics plus stage-aware traffic realism.
 
-    A scene is accepted only when both layers pass.  The historical 11 danger
-    checks are retained; the traffic-realism layer adds lane relation, heading,
-    physically plausible occluder motion, far-side emergence, short reveal,
-    pedestrian density, background vehicle motion/pose and static-object lane
-    safety.
+    Acceptance always requires:
+      1. all historical dangerous-semantic checks; and
+      2. controlled-hazard traffic realism (lane relation, heading, motion,
+         far-side emergence and short reveal time).
+
+    ``require_background_realism`` additionally requires generated-background
+    realism.  It should be ``False`` for B1/source-background diagnostics and
+    raw baselines, and ``True`` for simulator-ready semantic-protected RVAE and
+    diffusion products.
+
+    The controlled pedestrian/occluder are projected by ``projection_time_s``
+    because the B1 constructor compensates the SledgeBoard frame-0 offset.
+    Background realism is deliberately evaluated at the vector initialization
+    frame.  Straight-line projecting every background vehicle for 2.1 seconds
+    and comparing it against a curved static road creates false cross-lane
+    failures and does not model the reactive simulation dynamics.
     """
 
     lane_center_y = float(0.0 if lane_center_y is None else lane_center_y)
@@ -73,7 +106,11 @@ def evaluate_occluded_pedestrian_scene(
         lane_half_width=lane_half_width,
     )
     if pedestrian_choice is None:
-        return _empty_result(spec, "no valid pedestrian candidate")
+        return _empty_result(
+            spec,
+            "no valid pedestrian candidate",
+            require_background_realism=require_background_realism,
+        )
     pedestrian_index, pedestrian = pedestrian_choice
 
     occluders = []
@@ -234,6 +271,13 @@ def evaluate_occluded_pedestrian_scene(
             # language carrier (which may still contain "parked vehicle").
             occlusion_mode = "adjacent_lane_dynamic"
 
+        # Static-object slots are an authoritative physical cue.  This protects
+        # barrier/cone/sign cases from the canonical prompt carrier, whose text
+        # may still mention a parked vehicle while the executable override is a
+        # static occluder.
+        if occluder_element == "static_objects":
+            occlusion_mode = "roadside_static"
+
         required_edge = (
             ADJACENT_LANE_MIN_EDGE_CLEARANCE_M
             if occlusion_mode == "adjacent_lane_dynamic"
@@ -300,24 +344,58 @@ def evaluate_occluded_pedestrian_scene(
         lane_center_y=lane_center_y,
         lane_half_width=lane_half_width,
         ego_speed_mps=ego_speed,
-        projection_time_s=projection_time_s,
+        # Background quality is assessed at vector initialization.  The
+        # controlled hazard states above are already projected to the semantic
+        # display frame, so this does not weaken reveal/occlusion evaluation.
+        projection_time_s=0.0,
         occlusion_mode=occlusion_mode,
     )
-    traffic_checks = dict(traffic_realism.get("checks", {}))
-    checks = {**danger_checks, **traffic_checks}
-    overall_pass = bool(
-        danger_pass and traffic_realism.get("overall_pass", False)
+    all_traffic_checks = dict(traffic_realism.get("checks", {}))
+    controlled_traffic_checks = {
+        key: bool(all_traffic_checks.get(key, False))
+        for key in CONTROLLED_TRAFFIC_REALISM_KEYS
+    }
+    background_traffic_checks = {
+        key: bool(all_traffic_checks.get(key, False))
+        for key in BACKGROUND_TRAFFIC_REALISM_KEYS
+    }
+    controlled_traffic_pass = bool(all(controlled_traffic_checks.values()))
+    background_traffic_pass = bool(all(background_traffic_checks.values()))
+    required_traffic_checks = dict(controlled_traffic_checks)
+    if require_background_realism:
+        required_traffic_checks.update(background_traffic_checks)
+
+    traffic_realism_pass = bool(
+        controlled_traffic_pass
+        and (background_traffic_pass if require_background_realism else True)
+    )
+    required_checks = {**danger_checks, **required_traffic_checks}
+    all_checks = {**danger_checks, **all_traffic_checks}
+    overall_pass = bool(danger_pass and traffic_realism_pass)
+
+    traffic_realism = dict(traffic_realism)
+    traffic_realism.update(
+        {
+            "controlled_checks": controlled_traffic_checks,
+            "background_checks": background_traffic_checks,
+            "controlled_pass": controlled_traffic_pass,
+            "background_pass": background_traffic_pass,
+            "background_required": bool(require_background_realism),
+            "required_overall_pass": traffic_realism_pass,
+            "background_evaluation_projection_time_s": 0.0,
+        }
     )
 
     return {
-        "schema_version": "occluded_pedestrian_metrics_v3_traffic_realism",
+        "schema_version": "occluded_pedestrian_metrics_v4_stage_aware_realism",
         "overall_pass": overall_pass,
         "danger_semantic_pass": danger_pass,
-        "traffic_realism_pass": bool(
-            traffic_realism.get("overall_pass", False)
-        ),
+        "traffic_realism_pass": traffic_realism_pass,
+        "controlled_traffic_realism_pass": controlled_traffic_pass,
+        "background_realism_pass": background_traffic_pass,
+        "background_realism_required": bool(require_background_realism),
         # Preserve the original interpretation: semantic SSR covers only the
-        # historical danger checks.  Realism has its own rate below.
+        # historical danger checks.  Realism has its own rates below.
         "semantic_satisfaction_rate": float(
             sum(bool(value) for value in danger_checks.values())
             / len(danger_checks)
@@ -325,12 +403,27 @@ def evaluate_occluded_pedestrian_scene(
         "traffic_realism_satisfaction_rate": float(
             traffic_realism.get("satisfaction_rate", 0.0)
         ),
-        "combined_satisfaction_rate": float(
-            sum(bool(value) for value in checks.values()) / len(checks)
+        "controlled_traffic_realism_satisfaction_rate": float(
+            sum(controlled_traffic_checks.values())
+            / len(controlled_traffic_checks)
         ),
-        "checks": checks,
+        "background_realism_satisfaction_rate": float(
+            sum(background_traffic_checks.values())
+            / len(background_traffic_checks)
+        ),
+        "combined_satisfaction_rate": float(
+            sum(bool(value) for value in required_checks.values())
+            / len(required_checks)
+        ),
+        # ``checks`` contains only the checks that are gates for this stage.
+        # Full diagnostics remain available in ``all_checks`` and in the two
+        # traffic-realism dictionaries below.
+        "checks": required_checks,
+        "all_checks": all_checks,
         "danger_checks": danger_checks,
-        "traffic_realism_checks": traffic_checks,
+        "traffic_realism_checks": all_traffic_checks,
+        "controlled_traffic_realism_checks": controlled_traffic_checks,
+        "background_realism_checks": background_traffic_checks,
         "traffic_realism": traffic_realism,
         "pedestrian": {
             "index": int(pedestrian_index),
@@ -385,7 +478,7 @@ def aggregate_stage_metrics(
         bool(row.get("overall_pass")) for row in items
     )
     return {
-        "schema_version": "occluded_pedestrian_stage_summary_v2_traffic_realism",
+        "schema_version": "occluded_pedestrian_stage_summary_v3_stage_aware_realism",
         "stage": stage,
         "num_rows": count,
         "num_evaluated": len(evaluated),
@@ -399,6 +492,12 @@ def aggregate_stage_metrics(
         ),
         "traffic_realism_pass_count": sum(
             bool(row.get("traffic_realism_pass")) for row in items
+        ),
+        "controlled_traffic_realism_pass_count": sum(
+            bool(row.get("controlled_traffic_realism_pass")) for row in items
+        ),
+        "background_realism_pass_count": sum(
+            bool(row.get("background_realism_pass")) for row in items
         ),
         "mean_semantic_satisfaction_rate": (
             float(
@@ -670,17 +769,25 @@ def _normalized_range(
 def _empty_result(
     spec: HazardSemanticSpec,
     reason: str,
+    *,
+    require_background_realism: bool,
 ) -> Dict[str, Any]:
     return {
-        "schema_version": "occluded_pedestrian_metrics_v3_traffic_realism",
+        "schema_version": "occluded_pedestrian_metrics_v4_stage_aware_realism",
         "overall_pass": False,
         "danger_semantic_pass": False,
         "traffic_realism_pass": False,
+        "controlled_traffic_realism_pass": False,
+        "background_realism_pass": False,
+        "background_realism_required": bool(require_background_realism),
         "semantic_satisfaction_rate": 0.0,
         "traffic_realism_satisfaction_rate": 0.0,
         "checks": {"pedestrian_exists": False},
+        "all_checks": {"pedestrian_exists": False},
         "danger_checks": {"pedestrian_exists": False},
         "traffic_realism_checks": {},
+        "controlled_traffic_realism_checks": {},
+        "background_realism_checks": {},
         "reason": reason,
         "expected": {
             "occluder_type": spec.object_layer.occlusion.occluder_type,
@@ -691,6 +798,8 @@ def _empty_result(
 
 
 __all__ = [
+    "BACKGROUND_TRAFFIC_REALISM_KEYS",
+    "CONTROLLED_TRAFFIC_REALISM_KEYS",
     "aggregate_stage_metrics",
     "evaluate_occluded_pedestrian_scene",
 ]
