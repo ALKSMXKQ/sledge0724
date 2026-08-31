@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from sledge.autoencoder.preprocessing.features.sledge_vector_feature import SledgeVectorRaw
-from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_clearance_ops import (
-    HazardClearancePrimitiveOps,
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.traffic_realism import (
+    TrafficRealismHazardClearancePrimitiveOps,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import HazardSemanticSpec
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.primitive_compiler import PrimitiveOp
@@ -14,15 +14,10 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.edit_models
 
 @dataclass
 class EditContext:
-    """
-    Runtime state shared by primitive operations.
-
-    Primitive ops should communicate through this context rather than through
-    scenario-level global variables.
-    """
+    """Runtime state shared by primitive operations."""
 
     spec: HazardSemanticSpec
-    actor_elem_name: str = "none"  # vehicles / pedestrians / static_objects
+    actor_elem_name: str = "none"
     actor_index: int = -1
     occluder_index: int = -1
     occluder_elem_name: str = "vehicles"
@@ -37,17 +32,10 @@ class EditContext:
 
 
 class PrimitiveExecutor:
-    """
-    Execute primitive ops on SledgeVectorRaw.
-
-    The executor uses ``HazardClearancePrimitiveOps``. It inherits every
-    existing primitive unchanged and overrides only occluded-pedestrian
-    placement so unrelated background entities follow a move-then-delete
-    policy instead of vetoing a hard-valid occluder candidate.
-    """
+    """Execute primitive ops using the traffic-realistic hazard constructor."""
 
     def __init__(self) -> None:
-        self.ops = HazardClearancePrimitiveOps()
+        self.ops = TrafficRealismHazardClearancePrimitiveOps()
 
     def execute(
         self,
@@ -58,11 +46,9 @@ class PrimitiveExecutor:
         ctx = EditContext(spec=spec)
         edited = scene
         op_reports: List[Dict[str, Any]] = []
-
         for op in primitive_ops:
             edited, ctx, report = self._dispatch(edited, ctx, op)
             op_reports.append(report)
-
         result = self._build_scene_edit_result(ctx)
         full_report: Dict[str, Any] = {
             "spec": spec.to_dict(),
