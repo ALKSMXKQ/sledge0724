@@ -20,6 +20,9 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_m
     SEMANTIC_PROTECTED,
     SUPPORTED_DIFFUSION_MODES,
 )
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import (
+    HazardSemanticSpec,
+)
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.traffic_realism import (
     sanitize_generated_background,
 )
@@ -92,24 +95,61 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         self._active_edit_report = processed_report
         self._active_realism_report = {}
 
+        # Bind evaluation to the exact executable spec saved after B1
+        # construction.  The matrix prompt is only a language carrier and may
+        # say "parked vehicle" even when overrides request a barrier or a moving
+        # adjacent-lane vehicle.
+        sample_id = edited_scene_path.parent.name
+        run_root = edited_scene_path.parents[2]
+        spec_path = (
+            run_root
+            / "artifacts"
+            / sample_id
+            / "02_specification"
+            / "hazard_spec.json"
+        )
+        if (
+            spec_path.exists()
+            and hasattr(self.alignment_evaluator, "set_reference_spec")
+        ):
+            with spec_path.open("r", encoding="utf-8") as stream:
+                self.alignment_evaluator.set_reference_spec(
+                    HazardSemanticSpec.from_dict(json.load(stream))
+                )
+
+        label_path = edited_scene_path.parent / "scenario_label.json"
+        if label_path.exists():
+            with label_path.open("r", encoding="utf-8") as stream:
+                source_label = json.load(stream)
+            if hasattr(self.alignment_evaluator, "set_lane_center_y"):
+                self.alignment_evaluator.set_lane_center_y(
+                    float(source_label.get("semantic_lane_center_y", 0.0))
+                )
+            if hasattr(self.alignment_evaluator, "set_projection_time_s"):
+                self.alignment_evaluator.set_projection_time_s(
+                    float(source_label.get("semantic_projection_time_s", 2.1))
+                )
+
         if hasattr(self.alignment_evaluator, "set_reference_scene"):
             self.alignment_evaluator.set_reference_scene(template_vector)
-        # Preferred slot indices are allowed only in the protected comparison.
-        # Raw diffusion evaluation must rediscover objects after decoding.
-        if (
-            self.semantic_compositing_enabled
-            and hasattr(self.alignment_evaluator, "set_preferred_slots")
-        ):
-            self.alignment_evaluator.set_preferred_slots(
-                int(processed_report.get("pedestrian_index", -1)),
-                int(processed_report.get("occluder_index", -1)),
-                str(
-                    processed_report.get(
-                        "occluder_elem_name",
-                        "vehicles",
-                    )
-                ),
-            )
+
+        # Raw mode must rediscover generated actors.  Protected mode receives
+        # preferred controlled slots and thereby enables the full generated-
+        # background realism gate in the alignment evaluator.
+        if self.semantic_compositing_enabled:
+            if hasattr(self.alignment_evaluator, "set_preferred_slots"):
+                self.alignment_evaluator.set_preferred_slots(
+                    int(processed_report.get("pedestrian_index", -1)),
+                    int(processed_report.get("occluder_index", -1)),
+                    str(
+                        processed_report.get(
+                            "occluder_elem_name",
+                            "vehicles",
+                        )
+                    ),
+                )
+        elif hasattr(self.alignment_evaluator, "clear_preferred_slots"):
+            self.alignment_evaluator.clear_preferred_slots()
 
         try:
             summary = super().run_one(edited_scene_path, out_dir, index)
@@ -146,7 +186,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         "semantic_vector_compositing": (
                             self.semantic_compositing_enabled
                         ),
-                        "semantic_projection_time_s": 2.1,
+                        "semantic_projection_time_s": float(
+                            getattr(
+                                self.alignment_evaluator,
+                                "projection_time_s",
+                                2.1,
+                            )
+                        ),
                         "road_topology_lock": (
                             "exact_b1_lines"
                             if self.semantic_compositing_enabled
