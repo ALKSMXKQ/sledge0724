@@ -8,8 +8,8 @@ separate products:
 * ``raw_cache``: the RVAE model's own deterministic reconstruction (latent mu).
 * ``semantic_protected_cache``: the same reconstruction after projecting the
   B1 road/ego and controlled pedestrian/occluder slots back into the decoded
-  vector.  This is the simulator-ready contract used when semantics must be
-  guaranteed rather than merely measured.
+  vector. This simulator-ready product additionally sanitizes unrelated decoded
+  background actors and must pass the full generated-background realism gate.
 
 Both products are normal SLEDGE ``sledge_vector.gz`` caches and are round-trip
 opened with ``SledgeScenario`` before they are reported as valid.
@@ -162,7 +162,7 @@ class OccludedPedestrianRVAEReconstructor:
             failures,
         )
         summary = {
-            "schema_version": "occluded_pedestrian_rvae_reconstruction_v1",
+            "schema_version": "occluded_pedestrian_rvae_reconstruction_v2_stage_aware_realism",
             "num_accepted_b1": len(cases),
             "num_reconstructed": len(rows),
             "num_failures": len(failures),
@@ -171,6 +171,10 @@ class OccludedPedestrianRVAEReconstructor:
             ),
             "protected_semantic_pass_count": sum(
                 bool(row["protected_semantic_pass"]) for row in rows
+            ),
+            "protected_background_realism_pass_count": sum(
+                bool(row.get("protected_background_realism_pass", False))
+                for row in rows
             ),
             "raw_gzip_round_trip_pass_count": sum(
                 bool(row["raw_gzip_round_trip_pass"]) for row in rows
@@ -275,10 +279,12 @@ class OccludedPedestrianRVAEReconstructor:
             decoded = self.decoder(latent_mu)
         raw_reconstruction = decoded.torch_to_numpy(apply_sigmoid=True)
         protected_reconstruction = deepcopy(raw_reconstruction)
-        OccludedPedestrianHalfDenoiseRunner._composite_protected_slots(
-            protected_reconstruction,
-            b1_vector,
-            processed_report,
+        protected_realism_sanitization = (
+            OccludedPedestrianHalfDenoiseRunner._composite_protected_slots(
+                protected_reconstruction,
+                b1_vector,
+                processed_report,
+            )
         )
 
         raw_sim = make_simulation_compatible_vector(
@@ -296,12 +302,18 @@ class OccludedPedestrianRVAEReconstructor:
             source_label.get("semantic_lane_center_y", 0.0)
         )
 
+        # Raw reconstruction is diagnostic: keep generated-background realism
+        # visible in the report, but do not let it redefine raw hazard retention.
         raw_metrics = evaluate_occluded_pedestrian_scene(
             raw_sim,
             spec,
             projection_time_s=projection_time_s,
             lane_center_y=lane_center_y,
+            require_background_realism=False,
         )
+        # Protected reconstruction is simulator-ready and therefore must pass
+        # both controlled-hazard realism and generated-background realism after
+        # the sanitizer has run.
         protected_metrics = evaluate_occluded_pedestrian_scene(
             protected_sim,
             spec,
@@ -310,6 +322,7 @@ class OccludedPedestrianRVAEReconstructor:
             preferred_occluder_elem_name=occ_element,
             projection_time_s=projection_time_s,
             lane_center_y=lane_center_y,
+            require_background_realism=True,
         )
         raw_compliance = basic_scene_compliance(raw_sim)
         protected_compliance = basic_scene_compliance(protected_sim)
@@ -358,12 +371,14 @@ class OccludedPedestrianRVAEReconstructor:
                     "protected_metrics": protected_metrics,
                     "raw_compliance": raw_compliance,
                     "protected_compliance": protected_compliance,
+                    "protected_realism_sanitization": protected_realism_sanitization,
                     "error": "semantic-protected reconstruction failed acceptance gate",
                 },
             )
             raise RuntimeError(
                 "Semantic-protected RVAE reconstruction failed the canonical gate "
-                f"for {sample_id}"
+                f"for {sample_id}; failed_checks="
+                f"{[name for name, passed in protected_metrics.get('checks', {}).items() if not passed]}"
             )
 
         protected_vector_path, protected_round_trip = self._store_vector(
@@ -382,6 +397,7 @@ class OccludedPedestrianRVAEReconstructor:
             overrides=raw_overrides,
             round_trip=raw_round_trip,
             processed_report=processed_report,
+            realism_sanitization={},
         )
         protected_label = self._make_label(
             sample_id=sample_id,
@@ -393,6 +409,7 @@ class OccludedPedestrianRVAEReconstructor:
             overrides=protected_overrides,
             round_trip=protected_round_trip,
             processed_report=processed_report,
+            realism_sanitization=protected_realism_sanitization,
         )
         save_json(raw_out / "scenario_label.json", raw_label)
         save_json(protected_out / "scenario_label.json", protected_label)
@@ -408,8 +425,12 @@ class OccludedPedestrianRVAEReconstructor:
             evaluation_dir / "rvae_semantic_protected_metrics.json",
             protected_metrics,
         )
+        save_json(
+            evaluation_dir / "rvae_protected_realism_sanitization.json",
+            protected_realism_sanitization,
+        )
         report = {
-            "schema_version": "occluded_pedestrian_rvae_scene_report_v1",
+            "schema_version": "occluded_pedestrian_rvae_scene_report_v2_stage_aware_realism",
             "sample_id": sample_id,
             "latent_policy": "encoder_mu_deterministic",
             "raw": raw_label,
@@ -418,6 +439,7 @@ class OccludedPedestrianRVAEReconstructor:
             "protected_metrics": protected_metrics,
             "raw_compliance": raw_compliance,
             "protected_compliance": protected_compliance,
+            "protected_realism_sanitization": protected_realism_sanitization,
             "protected_slots": {
                 "road_topology": "all_lines",
                 "pedestrians": ped_index,
@@ -438,6 +460,9 @@ class OccludedPedestrianRVAEReconstructor:
             ),
             "protected_semantic_satisfaction_rate": float(
                 protected_metrics.get("semantic_satisfaction_rate", 0.0)
+            ),
+            "protected_background_realism_pass": bool(
+                protected_metrics.get("background_realism_pass", False)
             ),
             "raw_gzip_round_trip_pass": bool(raw_round_trip),
             "protected_gzip_round_trip_pass": bool(protected_round_trip),
@@ -505,6 +530,7 @@ class OccludedPedestrianRVAEReconstructor:
         overrides: Mapping[str, Mapping[str, str]],
         round_trip: bool,
         processed_report: Dict[str, Any],
+        realism_sanitization: Mapping[str, Any],
     ) -> Dict[str, Any]:
         ped_index = int(processed_report.get("pedestrian_index", -1))
         occ_index = int(processed_report.get("occluder_index", -1))
@@ -512,7 +538,7 @@ class OccludedPedestrianRVAEReconstructor:
             processed_report.get("occluder_elem_name", "vehicles")
         )
         return {
-            "schema_version": "occluded_pedestrian_rvae_cache_label_v1",
+            "schema_version": "occluded_pedestrian_rvae_cache_label_v2_stage_aware_realism",
             "sample_id": sample_id,
             "scenario_type": "sudden_pedestrian_crossing",
             "semantic_family": "occluded_pedestrian",
@@ -533,6 +559,18 @@ class OccludedPedestrianRVAEReconstructor:
                 source_label.get("semantic_projection_time_s", 0.0)
             ),
             "semantic_pass": bool(metrics.get("overall_pass", False)),
+            "danger_semantic_pass": bool(
+                metrics.get("danger_semantic_pass", False)
+            ),
+            "controlled_traffic_realism_pass": bool(
+                metrics.get("controlled_traffic_realism_pass", False)
+            ),
+            "background_realism_pass": bool(
+                metrics.get("background_realism_pass", False)
+            ),
+            "background_realism_required": bool(
+                metrics.get("background_realism_required", False)
+            ),
             "semantic_satisfaction_rate": float(
                 metrics.get("semantic_satisfaction_rate", 0.0)
             ),
@@ -546,6 +584,7 @@ class OccludedPedestrianRVAEReconstructor:
                 source_label.get("occluder_tracked_object_type", "VEHICLE")
             ),
             "object_type_overrides": dict(overrides),
+            "traffic_realism_sanitization": dict(realism_sanitization),
             "protected_slots": (
                 {
                     "road_topology": "all_lines",
