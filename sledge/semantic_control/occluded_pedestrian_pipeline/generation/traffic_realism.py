@@ -48,6 +48,10 @@ class TrafficRealismPolicy:
     reveal_min_time_s: float = 0.10
     reveal_max_time_s: float = 1.50
     reveal_step_s: float = 0.10
+    # ``np.arange`` can represent the exact 1.50 s endpoint as
+    # 1.5000000000000002.  Keep the physical contract at 1.50 s and use only a
+    # microsecond numerical tolerance when testing the closed interval.
+    reveal_comparison_epsilon_s: float = 1e-6
     emergence_min_far_side_gap_m: float = 0.20
     emergence_max_far_side_gap_m: float = 5.50
     emergence_max_longitudinal_gap_m: float = 8.00
@@ -264,7 +268,10 @@ def estimate_reveal_time(
             margin=0.25,
         )
         if not blocked:
-            return float(time_s)
+            # Quantize only the reporting/comparison time, not actor geometry.
+            # This keeps the 0.1 s search grid deterministic and avoids the
+            # 1.5000000000000002 endpoint artifact.
+            return round(float(time_s), 9)
     return None
 
 
@@ -657,11 +664,12 @@ def evaluate_traffic_realism(
             ego_speed_mps=ego_speed_mps,
             policy=policy,
         )
+        epsilon = float(max(policy.reveal_comparison_epsilon_s, 0.0))
         reveal_ok = bool(
             reveal_time is not None
-            and policy.reveal_min_time_s
+            and policy.reveal_min_time_s - epsilon
             <= reveal_time
-            <= policy.reveal_max_time_s
+            <= policy.reveal_max_time_s + epsilon
         )
 
     background = _evaluate_background(
@@ -694,7 +702,7 @@ def evaluate_traffic_realism(
     }
 
     return {
-        "schema_version": "occluded_pedestrian_traffic_realism_v1",
+        "schema_version": "occluded_pedestrian_traffic_realism_v2_numeric_reveal_boundary",
         "occlusion_mode": mode,
         "overall_pass": bool(all(checks.values())),
         "satisfaction_rate": float(sum(checks.values()) / len(checks)),
@@ -704,6 +712,11 @@ def evaluate_traffic_realism(
             "heading_error_deg": heading_error_deg,
             "lane_boundary_gap_m": lane_gap,
             "reveal_time_s": reveal_time,
+            "reveal_time_range_s": [
+                float(policy.reveal_min_time_s),
+                float(policy.reveal_max_time_s),
+            ],
+            "reveal_comparison_epsilon_s": epsilon if occluder is not None else float(policy.reveal_comparison_epsilon_s),
         },
         "background": background,
     }
