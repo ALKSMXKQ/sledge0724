@@ -73,13 +73,11 @@ def test_occluder_must_occlude_without_entering_ego_corridor() -> None:
     assert unsafe["overall_pass"] is False
 
 
-def test_metrics_use_source_lane_center_and_require_stationary_occluder() -> None:
+def test_metrics_use_source_lane_center_and_prompt_conditioned_occluder_motion() -> None:
     spec = OccludedPedestrianEventFrameAdapter(llm_provider="none").adapt(
-        "A pedestrian hidden behind a construction-zone sign crosses right "
-        "to left at 2.0 m/s."
+        "A pedestrian hidden behind a parked vehicle crosses right to left at 1.6 m/s."
     ).hazard_spec
-    scene = _scene(-3.50, np.pi / 2.0)
-    scene.vehicles.states[0, 3:6] = [0.6, 1.0, 0.0]
+    scene = _scene(-4.50, 0.0)
     shifted = evaluate_occluded_pedestrian_scene(
         scene,
         spec,
@@ -88,7 +86,7 @@ def test_metrics_use_source_lane_center_and_require_stationary_occluder() -> Non
         lane_center_y=1.0,
     )
     assert shifted["interaction"]["lane_center_y"] == 1.0
-    assert shifted["checks"]["occluder_stationary"] is True
+    assert shifted["checks"]["occluder_motion_semantics"] is True
 
     scene.vehicles.states[0, 5] = 0.5
     moving = evaluate_occluded_pedestrian_scene(
@@ -98,7 +96,7 @@ def test_metrics_use_source_lane_center_and_require_stationary_occluder() -> Non
         preferred_occluder_index=0,
         lane_center_y=1.0,
     )
-    assert moving["checks"]["occluder_stationary"] is False
+    assert moving["checks"]["occluder_motion_semantics"] is False
     assert moving["overall_pass"] is False
 
 
