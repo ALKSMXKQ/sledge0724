@@ -18,11 +18,13 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.language.eventframe_ad
 
 
 class OccludedPedestrianRefinementAlignmentEvaluator:
-    """Expose strict occlusion semantics through the legacy alignment interface."""
+    """Expose semantic + traffic-realism gates through the legacy interface."""
 
     def __init__(self, projection_time_s: float = 2.1) -> None:
         self.projection_time_s = float(projection_time_s)
-        self.adapter = OccludedPedestrianEventFrameAdapter(llm_provider="none")
+        self.adapter = OccludedPedestrianEventFrameAdapter(
+            llm_provider="none"
+        )
         self._spec_cache: Dict[str, Any] = {}
         self.preferred_pedestrian_index = None
         self.preferred_occluder_index = None
@@ -30,59 +32,142 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
         self.lane_center_y = 0.0
         self.reference_scene = None
 
-    def set_preferred_slots(self, pedestrian_index: int, occluder_index: int, occluder_elem_name: str) -> None:
-        self.preferred_pedestrian_index = pedestrian_index if pedestrian_index >= 0 else None
-        self.preferred_occluder_index = occluder_index if occluder_index >= 0 else None
+    def set_preferred_slots(
+        self,
+        pedestrian_index: int,
+        occluder_index: int,
+        occluder_elem_name: str,
+    ) -> None:
+        self.preferred_pedestrian_index = (
+            pedestrian_index if pedestrian_index >= 0 else None
+        )
+        self.preferred_occluder_index = (
+            occluder_index if occluder_index >= 0 else None
+        )
         self.preferred_occluder_elem_name = occluder_elem_name
 
     def set_reference_scene(self, scene: Any) -> None:
-        """Set the B1 vector whose road topology B2 must preserve."""
+        """Set an optional B1 road reference.
+
+        ``None`` is meaningful: topology-adaptive generation deliberately
+        disables B1 road preservation when language did not specify topology.
+        """
         self.reference_scene = scene
 
     def set_lane_center_y(self, lane_center_y: float) -> None:
-        self.lane_center_y = float(
-            lane_center_y
-        )
+        self.lane_center_y = float(lane_center_y)
 
-    def evaluate(self, sledge_vector: Any, prompt_spec: Any = None) -> PromptAlignmentResult:
-        prompt = str(getattr(prompt_spec, "raw_prompt", "") or getattr(prompt_spec, "normalized_prompt", ""))
+    def evaluate(
+        self,
+        sledge_vector: Any,
+        prompt_spec: Any = None,
+    ) -> PromptAlignmentResult:
+        prompt = str(
+            getattr(prompt_spec, "raw_prompt", "")
+            or getattr(prompt_spec, "normalized_prompt", "")
+        )
         if prompt not in self._spec_cache:
-            self._spec_cache[prompt] = self.adapter.adapt(prompt).hazard_spec
+            self._spec_cache[prompt] = self.adapter.adapt(
+                prompt
+            ).hazard_spec
         metrics = evaluate_occluded_pedestrian_scene(
             sledge_vector,
             self._spec_cache[prompt],
-            preferred_pedestrian_index=self.preferred_pedestrian_index,
-            preferred_occluder_index=self.preferred_occluder_index,
-            preferred_occluder_elem_name=self.preferred_occluder_elem_name,
+            preferred_pedestrian_index=(
+                self.preferred_pedestrian_index
+            ),
+            preferred_occluder_index=(
+                self.preferred_occluder_index
+            ),
+            preferred_occluder_elem_name=(
+                self.preferred_occluder_elem_name
+            ),
             projection_time_s=self.projection_time_s,
             lane_center_y=self.lane_center_y,
         )
         checks = metrics.get("checks", {})
+        traffic_checks = metrics.get("traffic_checks", {})
         details = {
-            "pedestrian_presence_score": float(bool(checks.get("pedestrian_exists", False))),
+            "pedestrian_presence_score": float(
+                bool(checks.get("pedestrian_exists", False))
+            ),
             "roadside_emergence_score": float(
                 bool(checks.get("occluder_exists", False))
-                and bool(checks.get("occluder_between_ego_and_actor", False))
-                and bool(checks.get("line_of_sight_occlusion", False))
+                and bool(
+                    checks.get(
+                        "occluder_between_ego_and_actor",
+                        False,
+                    )
+                )
+                and bool(
+                    checks.get("line_of_sight_occlusion", False)
+                )
             ),
             "crossing_direction_score": float(
-                bool(checks.get("direction_match", False)) and bool(checks.get("speed_match", False))
+                bool(checks.get("direction_match", False))
+                and bool(checks.get("speed_match", False))
             ),
-            "ego_lane_conflict_score": float(bool(checks.get("crossing_reaches_ego_lane", False))),
-            "immediacy_score": float(bool(checks.get("interaction_timing_match", False))),
+            "ego_lane_conflict_score": float(
+                bool(
+                    checks.get(
+                        "crossing_reaches_ego_lane",
+                        False,
+                    )
+                )
+            ),
+            "immediacy_score": float(
+                bool(
+                    checks.get(
+                        "interaction_timing_match",
+                        False,
+                    )
+                )
+            ),
+            "traffic_realism_score": float(
+                metrics.get("traffic_realism_rate", 0.0)
+            ),
         }
-        failed = [name for name, passed in checks.items() if not passed]
-        topology = evaluate_road_topology_preservation(self.reference_scene, sledge_vector)
+        failed = [
+            name
+            for name, passed in checks.items()
+            if not passed
+        ]
+        failed.extend(
+            f"traffic:{name}"
+            for name, passed in traffic_checks.items()
+            if not passed
+        )
+        topology = evaluate_road_topology_preservation(
+            self.reference_scene,
+            sledge_vector,
+        )
         if not topology["passed"]:
             failed.append("road_topology_preservation")
-        semantic_total = float(metrics.get("semantic_satisfaction_rate", 0.0))
-        total = semantic_total if topology["passed"] else 0.0
+        semantic_total = float(
+            metrics.get("semantic_satisfaction_rate", 0.0)
+        )
+        traffic_pass = bool(
+            metrics.get("traffic_realism_pass", False)
+        )
+        total = (
+            semantic_total
+            if topology["passed"] and traffic_pass
+            else 0.0
+        )
         details["road_topology_score"] = float(topology["score"])
         return PromptAlignmentResult(
             total=total,
             details=details,
             notes=[
-                "occluded-pedestrian strict checks: " + (", ".join(failed) if failed else "all passed"),
+                "occluded-pedestrian strict checks: "
+                + (
+                    ", ".join(failed)
+                    if failed
+                    else "all passed"
+                ),
+                "traffic realism: "
+                f"pass={traffic_pass}, "
+                f"rate={metrics.get('traffic_realism_rate', 0.0):.3f}",
                 "road topology: "
                 f"source_to_generated={topology['source_to_generated_mean_m']:.3f}m, "
                 f"generated_to_source={topology['generated_to_source_mean_m']:.3f}m, "
@@ -90,11 +175,17 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
                 f"generated_p95={topology['generated_to_source_p95_m']:.3f}m, "
                 f"line_ratio={topology['line_point_ratio']:.3f}",
             ],
-            accepted=bool(metrics.get("overall_pass", False) and topology["passed"]),
+            accepted=bool(
+                metrics.get("overall_pass", False)
+                and topology["passed"]
+            ),
         )
 
 
-def evaluate_road_topology_preservation(reference_scene: Any, candidate_scene: Any) -> Dict[str, Any]:
+def evaluate_road_topology_preservation(
+    reference_scene: Any,
+    candidate_scene: Any,
+) -> Dict[str, Any]:
     """Symmetric nearest-line distance rejects tangled diffusion road graphs."""
     if reference_scene is None:
         return {
@@ -118,14 +209,20 @@ def evaluate_road_topology_preservation(reference_scene: Any, candidate_scene: A
             "generated_to_source_p95_m": float("inf"),
             "line_point_ratio": 0.0,
         }
-    # At most 1000x1000 points for the configured vector representation.
-    distances = np.linalg.norm(source[:, None, :] - candidate[None, :, :], axis=-1)
+    distances = np.linalg.norm(
+        source[:, None, :] - candidate[None, :, :],
+        axis=-1,
+    )
     source_distances = np.min(distances, axis=1)
     candidate_distances = np.min(distances, axis=0)
     source_to_generated = float(source_distances.mean())
     generated_to_source = float(candidate_distances.mean())
-    source_to_generated_p95 = float(np.percentile(source_distances, 95))
-    generated_to_source_p95 = float(np.percentile(candidate_distances, 95))
+    source_to_generated_p95 = float(
+        np.percentile(source_distances, 95)
+    )
+    generated_to_source_p95 = float(
+        np.percentile(candidate_distances, 95)
+    )
     ratio = float(len(candidate) / len(source))
     passed = (
         source_to_generated <= 3.0
@@ -134,7 +231,10 @@ def evaluate_road_topology_preservation(reference_scene: Any, candidate_scene: A
         and generated_to_source_p95 <= 3.0
         and 0.55 <= ratio <= 1.45
     )
-    normalized_error = 0.5 * (source_to_generated / 3.0 + generated_to_source / 2.0)
+    normalized_error = 0.5 * (
+        source_to_generated / 3.0
+        + generated_to_source / 2.0
+    )
     score = float(max(0.0, 1.0 - normalized_error))
     return {
         "passed": bool(passed),
