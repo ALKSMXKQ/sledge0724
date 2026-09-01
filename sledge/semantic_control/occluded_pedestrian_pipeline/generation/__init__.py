@@ -17,6 +17,7 @@ from .diffusion_modes import (
     RAW_DIFFUSION_BASELINE,
     SEMANTIC_PROTECTED,
     SUPPORTED_DIFFUSION_MODES,
+    TOPOLOGY_ADAPTIVE,
 )
 from .hazard_spec import HazardSemanticSpec
 from .hierarchical_spec_adapter import HierarchicalHazardSpecAdapter
@@ -33,6 +34,7 @@ __all__ = [
     "CompositionalSemanticSceneEditor",
     "RAW_DIFFUSION_BASELINE",
     "SEMANTIC_PROTECTED",
+    "TOPOLOGY_ADAPTIVE",
     "SUPPORTED_DIFFUSION_MODES",
     "HazardSemanticSpec",
     "HierarchicalHazardSpecAdapter",
