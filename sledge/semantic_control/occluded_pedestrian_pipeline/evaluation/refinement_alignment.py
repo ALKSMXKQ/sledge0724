@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -18,7 +18,15 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.language.eventframe_ad
 
 
 class OccludedPedestrianRefinementAlignmentEvaluator:
-    """Expose semantic + traffic-realism gates through the legacy interface."""
+    """Expose semantic + traffic-realism gates through the legacy interface.
+
+    Topology-adaptive refinement must evaluate against the exact hazard spec
+    that was accepted and persisted at B1.  Re-adapting an ambiguous prompt at
+    B2 can re-sample side/direction and create a false disagreement with the
+    canonical semantic evaluator.  ``set_hazard_spec`` therefore installs the
+    authoritative B1 spec for the active scene.  Prompt re-adaptation remains
+    only as a backward-compatible fallback for historical callers.
+    """
 
     def __init__(self, projection_time_s: float = 2.1) -> None:
         self.projection_time_s = float(projection_time_s)
@@ -26,11 +34,21 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
             llm_provider="none"
         )
         self._spec_cache: Dict[str, Any] = {}
+        self._authoritative_hazard_spec: Optional[Any] = None
         self.preferred_pedestrian_index = None
         self.preferred_occluder_index = None
         self.preferred_occluder_elem_name = "vehicles"
         self.lane_center_y = 0.0
         self.reference_scene = None
+
+    def set_hazard_spec(self, hazard_spec: Optional[Any]) -> None:
+        """Set the authoritative semantic spec for the active B2 scene.
+
+        Passing ``None`` clears the scene-local override and restores the
+        historical prompt-adaptation fallback.
+        """
+
+        self._authoritative_hazard_spec = hazard_spec
 
     def set_preferred_slots(
         self,
@@ -66,13 +84,21 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
             getattr(prompt_spec, "raw_prompt", "")
             or getattr(prompt_spec, "normalized_prompt", "")
         )
-        if prompt not in self._spec_cache:
-            self._spec_cache[prompt] = self.adapter.adapt(
-                prompt
-            ).hazard_spec
+
+        if self._authoritative_hazard_spec is not None:
+            hazard_spec = self._authoritative_hazard_spec
+            semantic_spec_source = "authoritative_b1_hazard_spec"
+        else:
+            if prompt not in self._spec_cache:
+                self._spec_cache[prompt] = self.adapter.adapt(
+                    prompt
+                ).hazard_spec
+            hazard_spec = self._spec_cache[prompt]
+            semantic_spec_source = "prompt_adaptation_fallback"
+
         metrics = evaluate_occluded_pedestrian_scene(
             sledge_vector,
-            self._spec_cache[prompt],
+            hazard_spec,
             preferred_pedestrian_index=(
                 self.preferred_pedestrian_index
             ),
@@ -159,6 +185,7 @@ class OccludedPedestrianRefinementAlignmentEvaluator:
             total=total,
             details=details,
             notes=[
+                f"semantic spec source: {semantic_spec_source}",
                 "occluded-pedestrian strict checks: "
                 + (
                     ", ".join(failed)
