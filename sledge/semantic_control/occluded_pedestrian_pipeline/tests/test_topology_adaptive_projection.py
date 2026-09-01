@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 
 from sledge.autoencoder.preprocessing.features.sledge_vector_feature import (
@@ -6,6 +8,9 @@ from sledge.autoencoder.preprocessing.features.sledge_vector_feature import (
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.metrics import (
     evaluate_occluded_pedestrian_scene,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.refinement_alignment import (
+    OccludedPedestrianRefinementAlignmentEvaluator,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import (
     ActorLayer,
@@ -174,3 +179,52 @@ def test_explicit_parked_vehicle_remains_stationary() -> None:
     )
     assert report["hazard_variant"] == "roadside_parked"
     assert report["occluder"]["display_state"][5] == 0.0
+
+
+def test_alignment_reuses_authoritative_b1_hazard_spec() -> None:
+    """B2 alignment must not re-sample an ambiguous prompt direction."""
+
+    prompt = "A pedestrian suddenly emerges from behind a vehicle."
+    authoritative_spec = _spec(prompt)
+    projector = TopologyAdaptiveHazardProjector(
+        projection_time_s=2.1
+    )
+    projected, report = projector.project(
+        _straight_scene(),
+        authoritative_spec,
+        attempt_seed=17,
+    )
+
+    evaluator = OccludedPedestrianRefinementAlignmentEvaluator(
+        projection_time_s=2.1
+    )
+    evaluator.set_hazard_spec(authoritative_spec)
+    evaluator.set_reference_scene(None)
+    slots = report["projected_slots"]
+    evaluator.set_preferred_slots(
+        slots["pedestrians"],
+        slots["occluder_index"],
+        slots["occluder_element"],
+    )
+    evaluator.set_lane_center_y(
+        report["road_context"]["lane_center_y"]
+    )
+
+    def _unexpected_prompt_readaptation(*args, **kwargs):
+        raise AssertionError(
+            "authoritative B1 spec should bypass prompt re-adaptation"
+        )
+
+    evaluator.adapter.adapt = _unexpected_prompt_readaptation
+    prompt_spec = SimpleNamespace(
+        raw_prompt=prompt,
+        normalized_prompt=prompt,
+    )
+    result = evaluator.evaluate(projected, prompt_spec)
+
+    assert result.accepted is True
+    assert result.details["crossing_direction_score"] == 1.0
+    assert any(
+        "authoritative_b1_hazard_spec" in note
+        for note in result.notes
+    )
