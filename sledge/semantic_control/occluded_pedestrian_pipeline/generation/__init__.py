@@ -9,6 +9,11 @@ create a package-initialization cycle.
 Modules that need elastic editing should import it directly from
 ``generation.elastic_context_editor``.  This is already how the main pipeline
 imports it.
+
+The topology-adaptive projector has a small roadside/static robustness override
+installed here.  The historical base implementation remains in
+``topology_adaptive_projection.py`` for ablation/reference, while all normal
+imports of ``TopologyAdaptiveHazardProjector`` receive the robust subclass.
 """
 
 from .b0_scene_context import B0SceneContext, B0SceneContextExtractor
@@ -28,6 +33,20 @@ from .hierarchical_template_sampler import (
 )
 from .template_scene_synthesizer import TemplateSceneSynthesizer
 
+# Install the robust roadside/static solver transparently for direct imports
+# from generation.topology_adaptive_projection.  Importing the submodule here
+# is safe: it depends only on geometry/spec/object-type helpers, not evaluation
+# metrics, so it does not recreate the elastic-context cycle documented above.
+from . import topology_adaptive_projection as _topology_adaptive_projection
+from .topology_adaptive_projection_robust import (
+    RobustTopologyAdaptiveHazardProjector,
+)
+
+_topology_adaptive_projection.TopologyAdaptiveHazardProjector = (
+    RobustTopologyAdaptiveHazardProjector
+)
+
+
 __all__ = [
     "B0SceneContext",
     "B0SceneContextExtractor",
@@ -42,4 +61,5 @@ __all__ = [
     "HierarchicalTemplateSampler",
     "SamplingOverrides",
     "TemplateSceneSynthesizer",
+    "RobustTopologyAdaptiveHazardProjector",
 ]
