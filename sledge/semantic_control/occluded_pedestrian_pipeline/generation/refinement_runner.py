@@ -255,6 +255,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         )
         self._adaptive_projection_reports = {}
 
+        # B2 must reuse the exact B1 semantic decision.  Re-adapting the raw
+        # prompt here can re-sample an omitted side/direction and falsely veto
+        # a geometrically correct projection.
+        if hasattr(self.alignment_evaluator, "set_hazard_spec"):
+            self.alignment_evaluator.set_hazard_spec(
+                self._active_hazard_spec
+            )
         if hasattr(self.alignment_evaluator, "set_reference_scene"):
             self.alignment_evaluator.set_reference_scene(
                 template_vector
@@ -385,12 +392,19 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                     compliance = basic_scene_compliance(
                         sim_vector
                     )
-                    semantic_ok = bool(
+
+                    # Canonical B1 hazard semantics are the acceptance source
+                    # of truth.  The legacy alignment summary is retained only
+                    # as a diagnostic view and is not allowed to veto a scene
+                    # that passes the canonical semantic contract.
+                    alignment_semantic_ok = bool(
                         repaired_semantic.get(
                             "semantic_pass",
                             False,
                         )
-                        and strict_metrics.get(
+                    )
+                    semantic_ok = bool(
+                        strict_metrics.get(
                             "semantic_pass",
                             False,
                         )
@@ -429,6 +443,12 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         ),
                         "alignment_total": float(
                             repaired_alignment.total
+                        ),
+                        "alignment_semantic_pass": (
+                            alignment_semantic_ok
+                        ),
+                        "acceptance_semantic_source": (
+                            "canonical_b1_hazard_spec"
                         ),
                         "semantic_summary": repaired_semantic,
                         "strict_metrics": strict_metrics,
@@ -482,6 +502,9 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                     **edited_semantic,
                     "prompt": prompt,
                     "scenario_meta": scenario_meta,
+                    "semantic_spec_source": (
+                        "authoritative_b1_hazard_spec"
+                    ),
                     "topology_policy": (
                         "explicit_prompt_lock"
                         if self._adaptive_topology_locked
@@ -578,6 +601,10 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         "hazard_projection_policy": (
                             "copy_semantics_recompute_geometry"
                         ),
+                        "semantic_acceptance_policy": (
+                            "canonical_b1_hazard_spec"
+                        ),
+                        "legacy_alignment_diagnostic_only": True,
                         "topology_policy": (
                             "explicit_prompt_lock"
                             if self._adaptive_topology_locked
@@ -632,6 +659,12 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         "selected_alignment_total": float(
                             best["alignment_total"]
                         ),
+                        "selected_alignment_semantic_pass": bool(
+                            best.get(
+                                "alignment_semantic_pass",
+                                False,
+                            )
+                        ),
                         "selected_semantic_pass": bool(
                             best["strict_metrics"].get(
                                 "semantic_pass",
@@ -668,6 +701,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         "alignment_total": best[
                             "alignment_total"
                         ],
+                        "alignment_semantic_pass": best.get(
+                            "alignment_semantic_pass",
+                            False,
+                        ),
+                        "acceptance_semantic_source": (
+                            "canonical_b1_hazard_spec"
+                        ),
                         "semantic_summary": best[
                             "semantic_summary"
                         ],
@@ -699,6 +739,10 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                     {
                         "source": None,
                         "alignment_total": None,
+                        "alignment_semantic_pass": None,
+                        "acceptance_semantic_source": (
+                            "canonical_b1_hazard_spec"
+                        ),
                         "semantic_summary": None,
                         "strict_metrics": None,
                         "traffic_realism_pass": False,
@@ -740,6 +784,10 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                 "scenario_type": str(prompt_spec.scenario_type),
                 "diffusion_mode": TOPOLOGY_ADAPTIVE,
                 "semantic_vector_compositing": False,
+                "semantic_acceptance_policy": (
+                    "canonical_b1_hazard_spec"
+                ),
+                "legacy_alignment_diagnostic_only": True,
                 "topology_policy": (
                     "explicit_prompt_lock"
                     if self._adaptive_topology_locked
@@ -755,6 +803,16 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                     float(best["alignment_total"])
                     if best is not None
                     else None
+                ),
+                "selected_alignment_semantic_pass": (
+                    bool(
+                        best.get(
+                            "alignment_semantic_pass",
+                            False,
+                        )
+                    )
+                    if best is not None
+                    else False
                 ),
                 "selected_semantic_pass": (
                     bool(
@@ -800,6 +858,8 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             save_json(out_dir / "summary.json", summary)
             return summary
         finally:
+            if hasattr(self.alignment_evaluator, "set_hazard_spec"):
+                self.alignment_evaluator.set_hazard_spec(None)
             self._active_template = None
             self._active_hazard_spec = None
             self._adaptive_projection_reports = {}
