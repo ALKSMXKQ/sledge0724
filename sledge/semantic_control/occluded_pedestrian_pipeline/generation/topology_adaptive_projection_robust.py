@@ -1,26 +1,26 @@
-"""Robust roadside/static occluder solver for topology-adaptive projection.
+"""Robust topology-adaptive projector with global road-graph gating.
 
-This module keeps the existing topology-adaptive projector intact for the
-historical ablation, while replacing only the roadside parked/static placement
-logic used by the active generation package.  The override makes four
-constraints hard before candidate ranking:
+This module keeps the historical base topology-adaptive projector intact for
+ablation/reference while adding two active protections:
 
-1. line-of-sight blocking,
-2. ego-lane footprint clearance using the rotated occluder footprint,
-3. pedestrian remains on the far side of the occluder,
-4. pedestrian and occluder do not initially overlap.
+1. generated roads must pass SLEDGE's own global lane-graph validity gate;
+2. roadside parked/static occluders use robust rotated-footprint geometry.
 
-The dynamic adjacent-lane solver is delegated unchanged to the base projector.
+The road gate never repairs or copies road geometry.  A fragmented diffusion
+road is rejected so the refinement runner can sample another repair attempt.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 from sledge.autoencoder.preprocessing.features.sledge_vector_feature import (
     AgentIndex,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.road_graph_validity import (
+    evaluate_global_road_graph_validity,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.geometry_metrics import (
     line_of_sight_intersects_box,
@@ -42,7 +42,55 @@ MIN_ACTOR_FAR_SIDE_MARGIN_M = 0.10
 class RobustTopologyAdaptiveHazardProjector(
     BaseTopologyAdaptiveHazardProjector
 ):
-    """Topology-adaptive projector with robust roadside hazard geometry."""
+    """Active topology-adaptive projector with road and hazard hard gates."""
+
+    def project(
+        self,
+        vector: Any,
+        spec: Any,
+        *,
+        attempt_seed: int = 0,
+    ):
+        """Reject fragmented generated roads before hazard re-projection.
+
+        ``vector`` is the raw diffusion candidate.  Global road validity is
+        evaluated before any pedestrian/occluder geometry is changed, so this
+        gate measures the diffusion-generated road itself rather than a
+        post-processed version.
+        """
+
+        road_graph = evaluate_global_road_graph_validity(vector)
+        if not bool(road_graph.get("passed", False)):
+            failed = [
+                name
+                for name, passed in road_graph.get("checks", {}).items()
+                if not bool(passed)
+            ]
+            raise RuntimeError(
+                "global road graph validity failed: "
+                f"checks={failed}; "
+                f"nodes={road_graph.get('num_lane_nodes')}; "
+                f"edges={road_graph.get('num_lane_edges')}; "
+                f"components={road_graph.get('num_weak_components')}; "
+                f"ego_route_length_m="
+                f"{road_graph.get('ego_route_length_m')}; "
+                f"largest_component_length_ratio="
+                f"{road_graph.get('largest_component_length_ratio')}; "
+                f"orphan_lane_length_ratio="
+                f"{road_graph.get('orphan_lane_length_ratio')}"
+            )
+
+        projected, report = super().project(
+            vector,
+            spec,
+            attempt_seed=attempt_seed,
+        )
+        report = dict(report)
+        report["road_graph_validity"] = road_graph
+        report["road_graph_policy"] = (
+            "reject_fragmented_diffusion_road_no_geometry_repair"
+        )
+        return projected, report
 
     def _solve_occluder(
         self,
