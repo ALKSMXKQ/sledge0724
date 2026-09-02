@@ -1,9 +1,9 @@
-"""Robust topology-adaptive projector with global road-graph gating.
+"""Robust topology-adaptive projector with global road-network gating.
 
 This module keeps the historical base topology-adaptive projector intact for
 ablation/reference while adding two active protections:
 
-1. generated roads must pass SLEDGE's own global lane-graph validity gate;
+1. generated roads must pass SLEDGE-consistent global road validity;
 2. roadside parked/static occluders use robust rotated-footprint geometry.
 
 The road gate never repairs or copies road geometry.  A fragmented diffusion
@@ -54,9 +54,8 @@ class RobustTopologyAdaptiveHazardProjector(
         """Reject fragmented generated roads before hazard re-projection.
 
         ``vector`` is the raw diffusion candidate.  Global road validity is
-        evaluated before any pedestrian/occluder geometry is changed, so this
-        gate measures the diffusion-generated road itself rather than a
-        post-processed version.
+        evaluated before pedestrian/occluder geometry is changed, so the gate
+        measures the diffusion-generated road itself.
         """
 
         road_graph = evaluate_global_road_graph_validity(vector)
@@ -71,11 +70,12 @@ class RobustTopologyAdaptiveHazardProjector(
                 f"checks={failed}; "
                 f"nodes={road_graph.get('num_lane_nodes')}; "
                 f"edges={road_graph.get('num_lane_edges')}; "
-                f"components={road_graph.get('num_weak_components')}; "
-                f"ego_route_length_m="
-                f"{road_graph.get('ego_route_length_m')}; "
-                f"largest_component_length_ratio="
-                f"{road_graph.get('largest_component_length_ratio')}; "
+                f"spatial_components="
+                f"{road_graph.get('num_spatial_components')}; "
+                f"ego_forward_route_length_m="
+                f"{road_graph.get('ego_forward_route_length_m')}; "
+                f"largest_spatial_component_length_ratio="
+                f"{road_graph.get('largest_spatial_component_length_ratio')}; "
                 f"orphan_lane_length_ratio="
                 f"{road_graph.get('orphan_lane_length_ratio')}"
             )
@@ -124,9 +124,6 @@ class RobustTopologyAdaptiveHazardProjector(
             else float(road.lower_boundary_y)
         )
 
-        # A parked/static occluder is aligned to the generated road.  Its
-        # rotated length contributes to lateral road occupancy, so roadside
-        # placement must use the full lateral half extent rather than width/2.
         lateral_half = _lateral_half_extent(
             heading,
             float(occluder_width),
@@ -159,9 +156,6 @@ class RobustTopologyAdaptiveHazardProjector(
                     + mix * desired_y
                 )
 
-                # The actor must remain farther from the ego lane than the
-                # occluder center; otherwise it is not an emergence-from-behind
-                # configuration even if the LOS happens to intersect the box.
                 far_side_margin = float(side_sign * (ay - y))
                 if far_side_margin < MIN_ACTOR_FAR_SIDE_MARGIN_M:
                     continue
@@ -178,11 +172,6 @@ class RobustTopologyAdaptiveHazardProjector(
                     dtype=np.float32,
                 )
 
-                # Hard non-overlap before ranking.  _rough_overlap is slightly
-                # more conservative than the final semantic evaluator, so a
-                # candidate accepted here cannot later fail the canonical
-                # no_actor_occluder_initial_overlap check merely because of the
-                # projector's own placement.
                 if _rough_overlap(
                     actor_display,
                     occ,
@@ -219,9 +208,6 @@ class RobustTopologyAdaptiveHazardProjector(
                     (ax, ay),
                 )
 
-                # Prefer a natural roadside placement close to the rotated
-                # footprint target and LOS ray, while maintaining useful
-                # longitudinal separation from the pedestrian.
                 score = float(
                     abs(y - desired_y)
                     + 0.20 * perpendicular
