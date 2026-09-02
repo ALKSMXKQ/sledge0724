@@ -1,9 +1,14 @@
-"""Global road-graph validity for topology-adaptive SLEDGE scenes.
+"""Global road-network validity for topology-adaptive SLEDGE scenes.
 
-Generation-time road validation must use the same lane-graph construction as
-SLEDGE simulation.  This module therefore reuses ``construct_sledge_map_graph``
-and never repairs road geometry.  Invalid diffusion road graphs are rejected so
-the caller can sample another repair attempt.
+Generation-time road validation reuses SLEDGE's own map construction.  The
+validator combines two complementary views:
+
+1. directed lane graph, used by SLEDGE route construction;
+2. spatial connectivity of SLEDGE lane polygons, used to detect floating road
+   islands without falsely rejecting parallel lanes or one long valid lane.
+
+The module never repairs road geometry.  Invalid diffusion roads are rejected
+so the caller can sample another repair attempt.
 """
 
 from __future__ import annotations
@@ -18,21 +23,15 @@ from sledge.simulation.maps.sledge_map.sledge_map_graph import (
 )
 
 
-MIN_EGO_ROUTE_LENGTH_M = 24.0
-MIN_EGO_COMPONENT_LANES = 2
-MIN_EGO_REACHABLE_LANES = 2
-MIN_LARGEST_COMPONENT_LENGTH_RATIO = 0.55
+MIN_EGO_FORWARD_ROUTE_LENGTH_M = 24.0
+MIN_EGO_SPATIAL_COMPONENT_LENGTH_M = 30.0
+MIN_LARGEST_SPATIAL_COMPONENT_LENGTH_RATIO = 0.60
 MAX_ORPHAN_LENGTH_RATIO = 0.35
-DISALLOW_SINGLE_LANE_ROUTE_FALLBACK = True
+SPATIAL_COMPONENT_GAP_M = 0.75
 
 
 def evaluate_global_road_graph_validity(scene: Any) -> Dict[str, Any]:
-    """Evaluate whether a generated road graph is globally usable.
-
-    The start lane heuristic, lane graph and sink-route semantics mirror the
-    SLEDGE simulation stack.  The returned payload is JSON serializable and is
-    intended both for candidate gating and diagnostics.
-    """
+    """Evaluate global usability and fragmentation of a generated road."""
 
     try:
         map_graph = construct_sledge_map_graph(scene)
@@ -44,6 +43,7 @@ def evaluate_global_road_graph_validity(scene: Any) -> Dict[str, Any]:
 
     graph = map_graph.directed_lane_graph
     baselines = map_graph.baseline_paths_dict
+    polygons = map_graph.polygon_dict
     node_ids = [str(node) for node in graph.nodes()]
 
     if not node_ids or not baselines:
@@ -65,39 +65,11 @@ def evaluate_global_road_graph_validity(scene: Any) -> Dict[str, Any]:
             total_lane_length_m=total_lane_length,
         )
 
-    weak_components = list(nx.weakly_connected_components(graph))
-    component_sets = [
-        {str(node) for node in component}
-        for component in weak_components
-    ]
-    ego_component: Set[str] = set()
-    for component in component_sets:
-        if ego_node in component:
-            ego_component = component
-            break
-
-    component_lengths = [
-        float(sum(lane_lengths.get(node, 0.0) for node in component))
-        for component in component_sets
-    ]
-    largest_component_length = max(component_lengths, default=0.0)
-    largest_component_length_ratio = (
-        float(largest_component_length / total_lane_length)
-        if total_lane_length > 1e-6
-        else 0.0
-    )
-    ego_component_length = float(
-        sum(lane_lengths.get(node, 0.0) for node in ego_component)
-    )
-
-    try:
-        reachable_nodes = {
-            str(node) for node in nx.descendants(graph, ego_node)
-        }
-    except Exception:
-        reachable_nodes = set()
-    reachable_nodes.add(str(ego_node))
-
+    # ------------------------------------------------------------------
+    # Directed route view: same connection graph used by SLEDGE.
+    # A single long lane is valid, so route validity is based on available
+    # forward distance rather than requiring multiple graph nodes.
+    # ------------------------------------------------------------------
     sink_nodes = [
         str(node)
         for node in graph.nodes()
@@ -119,17 +91,80 @@ def evaluate_global_road_graph_validity(scene: Any) -> Dict[str, Any]:
     if available_paths:
         best_route = max(
             available_paths,
-            key=lambda path: _path_length(path, lane_lengths),
+            key=lambda path: _available_forward_route_length(
+                path,
+                baselines,
+                lane_lengths,
+            ),
         )
     else:
-        # Mirrors the current SLEDGE get_route() fallback, but the gate below
-        # rejects this as evidence of an invalid generated road network.
         best_route = [str(ego_node)]
 
-    ego_route_length = _path_length(best_route, lane_lengths)
+    ego_forward_route_length = _available_forward_route_length(
+        best_route,
+        baselines,
+        lane_lengths,
+    )
+
+    try:
+        directed_reachable = {
+            str(node) for node in nx.descendants(graph, ego_node)
+        }
+    except Exception:
+        directed_reachable = set()
+    directed_reachable.add(str(ego_node))
+
+    # ------------------------------------------------------------------
+    # Spatial road view.
+    # Directed lane edges do not represent lateral adjacency, so weak graph
+    # components would incorrectly label normal parallel lanes as islands.
+    # Instead, connect lane polygons that overlap/touch or are separated by a
+    # very small gap.  This matches what is visibly perceived as one road body
+    # in SledgeBoard.
+    # ------------------------------------------------------------------
+    spatial_graph = nx.Graph()
+    spatial_graph.add_nodes_from(node_ids)
+    for i, node_i in enumerate(node_ids):
+        polygon_i = polygons.get(node_i)
+        if polygon_i is None:
+            continue
+        for node_j in node_ids[i + 1 :]:
+            polygon_j = polygons.get(node_j)
+            if polygon_j is None:
+                continue
+            try:
+                distance = float(polygon_i.distance(polygon_j))
+            except Exception:
+                continue
+            if distance <= SPATIAL_COMPONENT_GAP_M:
+                spatial_graph.add_edge(node_i, node_j)
+
+    spatial_components = [
+        {str(node) for node in component}
+        for component in nx.connected_components(spatial_graph)
+    ]
+    ego_spatial_component: Set[str] = set()
+    for component in spatial_components:
+        if ego_node in component:
+            ego_spatial_component = component
+            break
+
+    component_lengths = [
+        float(sum(lane_lengths.get(node, 0.0) for node in component))
+        for component in spatial_components
+    ]
+    largest_component_length = max(component_lengths, default=0.0)
+    largest_component_length_ratio = (
+        float(largest_component_length / total_lane_length)
+        if total_lane_length > 1e-6
+        else 0.0
+    )
+    ego_component_length = float(
+        sum(lane_lengths.get(node, 0.0) for node in ego_spatial_component)
+    )
 
     all_nodes = set(node_ids)
-    orphan_nodes = all_nodes - ego_component
+    orphan_nodes = all_nodes - ego_spatial_component
     orphan_lane_length = float(
         sum(lane_lengths.get(node, 0.0) for node in orphan_nodes)
     )
@@ -140,23 +175,15 @@ def evaluate_global_road_graph_validity(scene: Any) -> Dict[str, Any]:
     )
 
     checks = {
-        "ego_route_exists": bool(
-            not route_fallback_used
-            if DISALLOW_SINGLE_LANE_ROUTE_FALLBACK
-            else True
+        "ego_forward_route_length_ok": bool(
+            ego_forward_route_length >= MIN_EGO_FORWARD_ROUTE_LENGTH_M
         ),
-        "ego_route_length_ok": bool(
-            ego_route_length >= MIN_EGO_ROUTE_LENGTH_M
+        "ego_spatial_component_length_ok": bool(
+            ego_component_length >= MIN_EGO_SPATIAL_COMPONENT_LENGTH_M
         ),
-        "ego_component_size_ok": bool(
-            len(ego_component) >= MIN_EGO_COMPONENT_LANES
-        ),
-        "ego_reachable_lane_count_ok": bool(
-            len(reachable_nodes) >= MIN_EGO_REACHABLE_LANES
-        ),
-        "largest_component_ratio_ok": bool(
+        "largest_spatial_component_ratio_ok": bool(
             largest_component_length_ratio
-            >= MIN_LARGEST_COMPONENT_LENGTH_RATIO
+            >= MIN_LARGEST_SPATIAL_COMPONENT_LENGTH_RATIO
         ),
         "orphan_fragment_ratio_ok": bool(
             orphan_length_ratio <= MAX_ORPHAN_LENGTH_RATIO
@@ -165,23 +192,30 @@ def evaluate_global_road_graph_validity(scene: Any) -> Dict[str, Any]:
     passed = all(checks.values())
 
     return {
-        "schema_version": "global_road_graph_validity_v1",
+        "schema_version": "global_road_graph_validity_v2",
         "passed": bool(passed),
         "checks": checks,
         "reason": None if passed else "road_graph_gate_failed",
         "num_lane_nodes": int(len(node_ids)),
         "num_lane_edges": int(graph.number_of_edges()),
-        "num_weak_components": int(len(weak_components)),
-        "largest_component_length_m": float(largest_component_length),
-        "largest_component_length_ratio": float(
+        "num_directed_weak_components": int(
+            nx.number_weakly_connected_components(graph)
+        ),
+        "num_spatial_components": int(len(spatial_components)),
+        "largest_spatial_component_length_m": float(
+            largest_component_length
+        ),
+        "largest_spatial_component_length_ratio": float(
             largest_component_length_ratio
         ),
         "ego_start_lane_id": str(ego_node),
-        "ego_component_lane_count": int(len(ego_component)),
-        "ego_component_length_m": float(ego_component_length),
-        "ego_reachable_lane_count": int(len(reachable_nodes)),
+        "ego_spatial_component_lane_count": int(
+            len(ego_spatial_component)
+        ),
+        "ego_spatial_component_length_m": float(ego_component_length),
+        "ego_directed_reachable_lane_count": int(len(directed_reachable)),
         "ego_route_lane_ids": list(best_route),
-        "ego_route_length_m": float(ego_route_length),
+        "ego_forward_route_length_m": float(ego_forward_route_length),
         "route_fallback_used": bool(route_fallback_used),
         "total_lane_length_m": float(total_lane_length),
         "orphan_lane_count": int(len(orphan_nodes)),
@@ -215,55 +249,74 @@ def _polyline_length(poses: np.ndarray) -> float:
     return float(np.linalg.norm(delta, axis=1).sum())
 
 
-def _path_length(
+def _available_forward_on_first_lane(poses: np.ndarray) -> float:
+    """Approximate arc length from local ego origin to lane end."""
+
+    poses = np.asarray(poses, dtype=np.float64)
+    if poses.ndim != 2 or len(poses) < 2 or poses.shape[1] < 2:
+        return 0.0
+    segment_lengths = np.linalg.norm(np.diff(poses[:, :2], axis=0), axis=1)
+    cumulative = np.concatenate([[0.0], np.cumsum(segment_lengths)])
+    nearest_index = int(np.argmin(np.linalg.norm(poses[:, :2], axis=1)))
+    return float(max(0.0, cumulative[-1] - cumulative[nearest_index]))
+
+
+def _available_forward_route_length(
     path: Iterable[str],
+    baselines: Dict[str, np.ndarray],
     lane_lengths: Dict[str, float],
 ) -> float:
-    return float(
-        sum(lane_lengths.get(str(node), 0.0) for node in path)
+    path = [str(node) for node in path]
+    if not path:
+        return 0.0
+    first = path[0]
+    first_forward = _available_forward_on_first_lane(
+        np.asarray(baselines[first])
     )
+    remaining = sum(lane_lengths.get(node, 0.0) for node in path[1:])
+    return float(first_forward + remaining)
 
 
 def _threshold_payload() -> Dict[str, Any]:
     return {
-        "min_ego_route_length_m": float(MIN_EGO_ROUTE_LENGTH_M),
-        "min_ego_component_lanes": int(MIN_EGO_COMPONENT_LANES),
-        "min_ego_reachable_lanes": int(MIN_EGO_REACHABLE_LANES),
-        "min_largest_component_length_ratio": float(
-            MIN_LARGEST_COMPONENT_LENGTH_RATIO
+        "min_ego_forward_route_length_m": float(
+            MIN_EGO_FORWARD_ROUTE_LENGTH_M
+        ),
+        "min_ego_spatial_component_length_m": float(
+            MIN_EGO_SPATIAL_COMPONENT_LENGTH_M
+        ),
+        "min_largest_spatial_component_length_ratio": float(
+            MIN_LARGEST_SPATIAL_COMPONENT_LENGTH_RATIO
         ),
         "max_orphan_length_ratio": float(MAX_ORPHAN_LENGTH_RATIO),
-        "disallow_single_lane_route_fallback": bool(
-            DISALLOW_SINGLE_LANE_ROUTE_FALLBACK
-        ),
+        "spatial_component_gap_m": float(SPATIAL_COMPONENT_GAP_M),
     }
 
 
 def _failed_payload(reason: str, **extra: Any) -> Dict[str, Any]:
     checks = {
-        "ego_route_exists": False,
-        "ego_route_length_ok": False,
-        "ego_component_size_ok": False,
-        "ego_reachable_lane_count_ok": False,
-        "largest_component_ratio_ok": False,
+        "ego_forward_route_length_ok": False,
+        "ego_spatial_component_length_ok": False,
+        "largest_spatial_component_ratio_ok": False,
         "orphan_fragment_ratio_ok": False,
     }
     payload = {
-        "schema_version": "global_road_graph_validity_v1",
+        "schema_version": "global_road_graph_validity_v2",
         "passed": False,
         "checks": checks,
         "reason": str(reason),
         "num_lane_nodes": 0,
         "num_lane_edges": 0,
-        "num_weak_components": 0,
-        "largest_component_length_m": 0.0,
-        "largest_component_length_ratio": 0.0,
+        "num_directed_weak_components": 0,
+        "num_spatial_components": 0,
+        "largest_spatial_component_length_m": 0.0,
+        "largest_spatial_component_length_ratio": 0.0,
         "ego_start_lane_id": None,
-        "ego_component_lane_count": 0,
-        "ego_component_length_m": 0.0,
-        "ego_reachable_lane_count": 0,
+        "ego_spatial_component_lane_count": 0,
+        "ego_spatial_component_length_m": 0.0,
+        "ego_directed_reachable_lane_count": 0,
         "ego_route_lane_ids": [],
-        "ego_route_length_m": 0.0,
+        "ego_forward_route_length_m": 0.0,
         "route_fallback_used": True,
         "total_lane_length_m": 0.0,
         "orphan_lane_count": 0,
