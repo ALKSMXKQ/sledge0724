@@ -64,8 +64,25 @@ def test_connected_generated_road_graph_passes():
     )
     result = evaluate_global_road_graph_validity(scene)
     assert result["passed"], result
-    assert result["checks"]["ego_route_length_ok"]
-    assert result["checks"]["ego_reachable_lane_count_ok"]
+    assert result["checks"]["ego_forward_route_length_ok"]
+    assert result["checks"]["ego_spatial_component_length_ok"]
+    assert result["checks"]["largest_spatial_component_ratio_ok"]
+    assert result["checks"]["orphan_fragment_ratio_ok"]
+    assert result["orphan_lane_length_ratio"] == 0.0
+
+
+def test_parallel_long_lanes_are_not_false_orphans():
+    scene = _make_scene(
+        [
+            [[-40.0, -5.25], [0.0, -5.25], [40.0, -5.25]],
+            [[-40.0, -1.75], [0.0, -1.75], [40.0, -1.75]],
+            [[-40.0, 1.75], [0.0, 1.75], [40.0, 1.75]],
+            [[-40.0, 5.25], [0.0, 5.25], [40.0, 5.25]],
+        ]
+    )
+    result = evaluate_global_road_graph_validity(scene)
+    assert result["passed"], result
+    assert result["num_spatial_components"] == 1
     assert result["orphan_lane_length_ratio"] == 0.0
 
 
@@ -80,11 +97,11 @@ def test_fragmented_generated_road_graph_fails():
     )
     result = evaluate_global_road_graph_validity(scene)
     assert not result["passed"]
-    assert result["num_weak_components"] >= 3
+    assert result["num_spatial_components"] >= 3
     assert (
-        not result["checks"]["largest_component_ratio_ok"]
+        not result["checks"]["ego_forward_route_length_ok"]
+        or not result["checks"]["largest_spatial_component_ratio_ok"]
         or not result["checks"]["orphan_fragment_ratio_ok"]
-        or not result["checks"]["ego_reachable_lane_count_ok"]
     )
 
 
@@ -103,7 +120,7 @@ def test_large_floating_road_is_rejected_even_with_valid_ego_route():
     assert not result["checks"]["orphan_fragment_ratio_ok"]
 
 
-def test_single_lane_scene_is_not_globally_valid():
+def test_short_single_lane_scene_is_not_globally_valid():
     scene = _make_scene(
         [
             [[-10.0, 0.0], [0.0, 0.0], [10.0, 0.0]],
@@ -111,5 +128,16 @@ def test_single_lane_scene_is_not_globally_valid():
     )
     result = evaluate_global_road_graph_validity(scene)
     assert not result["passed"]
-    assert not result["checks"]["ego_component_size_ok"]
-    assert not result["checks"]["ego_reachable_lane_count_ok"]
+    assert not result["checks"]["ego_forward_route_length_ok"]
+
+
+def test_long_single_lane_scene_can_be_valid():
+    scene = _make_scene(
+        [
+            [[-40.0, 0.0], [0.0, 0.0], [40.0, 0.0]],
+        ]
+    )
+    result = evaluate_global_road_graph_validity(scene)
+    assert result["passed"], result
+    assert result["checks"]["ego_forward_route_length_ok"]
+    assert result["orphan_lane_length_ratio"] == 0.0
