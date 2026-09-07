@@ -1,0 +1,17 @@
+# Merge this fragment into the expanded OmegaConf used by the half-denoise runner.
+# The legacy mode remains available as: road_protection_mode: copy_b1
+road_protection_mode: generated_with_guidance
+
+lane_guidance:
+  enabled: true
+  schedule:
+    start_ratio: 0.50
+    strong_ratio: 0.80
+  weak_strength: 0.010
+  strong_strength: 0.035
+  heading_weight: 1.0
+  curvature_weight: 0.7
+  adjacent_heading_weight: 0.35
+  width_weight: 0.20
+  mask_threshold: 0.30
+  grad_clip: 4.0
