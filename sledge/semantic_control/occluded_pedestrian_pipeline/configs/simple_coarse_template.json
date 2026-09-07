@@ -1,0 +1,9 @@
+{
+  "schema_version": "occluded_pedestrian_simple_v1",
+  "topology_family": "road_segment",
+  "occluder_types": ["vehicle", "barrier"],
+  "occluder_sides": ["left", "right"],
+  "risk_levels": ["mild", "moderate", "aggressive"],
+  "total_samples": 30,
+  "prompt_template": "A {risk} occluded-pedestrian event: a {occluder} on the {side} hides a pedestrian who emerges toward the ego path."
+}
