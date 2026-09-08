@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -22,6 +22,9 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.generation.diffusion_m
     RAW_DIFFUSION_BASELINE,
     SEMANTIC_PROTECTED,
     SUPPORTED_DIFFUSION_MODES,
+)
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.hazard_spec import (
+    HazardSemanticSpec,
 )
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.topology_filter import (
     classify_topology,
@@ -43,10 +46,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
     def __init__(self, args) -> None:
         super().__init__(args)
-        self.diffusion_mode = str(getattr(args, "diffusion_mode", SEMANTIC_PROTECTED))
+        self.diffusion_mode = str(
+            getattr(args, "diffusion_mode", SEMANTIC_PROTECTED)
+        )
         if self.diffusion_mode not in SUPPORTED_DIFFUSION_MODES:
             raise ValueError(
-                f"Unsupported diffusion_mode={self.diffusion_mode!r}; expected {sorted(SUPPORTED_DIFFUSION_MODES)}"
+                f"Unsupported diffusion_mode={self.diffusion_mode!r}; "
+                f"expected {sorted(SUPPORTED_DIFFUSION_MODES)}"
             )
         self.road_protection_mode = str(
             self.cfg.get("road_protection_mode", COPY_B1_ROAD)
@@ -57,7 +63,11 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                 f"expected {sorted(SUPPORTED_ROAD_PROTECTION_MODES)}"
             )
         raw_guidance = self.cfg.get("lane_guidance", {})
-        self.lane_guidance_config = OmegaConf.to_container(raw_guidance, resolve=True) if raw_guidance else {}
+        self.lane_guidance_config = (
+            OmegaConf.to_container(raw_guidance, resolve=True)
+            if raw_guidance
+            else {}
+        )
         if not isinstance(self.lane_guidance_config, dict):
             self.lane_guidance_config = {}
         if self.road_protection_mode == GENERATED_WITH_GUIDANCE:
@@ -69,6 +79,10 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         self._active_topology_family = "road_segment"
         self._active_lane_pairs = []
         self._lane_guidance_trace = []
+        self._active_semantic_projection_time_s = 2.1
+        self._active_semantic_lane_center_y = 0.0
+        self._active_semantic_contract_source = "prompt_reparsed_fallback"
+        self._active_road_topology_gate_enabled = False
 
     @property
     def semantic_compositing_enabled(self) -> bool:
@@ -76,17 +90,48 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
     @property
     def exact_road_copy_enabled(self) -> bool:
-        return self.semantic_compositing_enabled and self.road_protection_mode == COPY_B1_ROAD
+        return (
+            self.semantic_compositing_enabled
+            and self.road_protection_mode == COPY_B1_ROAD
+        )
 
-    def run_one(self, edited_scene_path: Path, out_dir: Path, index: int) -> Dict[str, object]:
+    def run_one(
+        self,
+        edited_scene_path: Path,
+        out_dir: Path,
+        index: int,
+    ) -> Dict[str, object]:
         edited_raw, _ = load_raw_scene(edited_scene_path)
-        template_vector, _ = sledge_raw_feature_processing(edited_raw, self.ae_config)
+        template_vector, _ = sledge_raw_feature_processing(
+            edited_raw,
+            self.ae_config,
+        )
+
         report_path = edited_scene_path.parent / "edit_report.json"
         with report_path.open("r", encoding="utf-8") as stream:
             edit_report = json.load(stream)
-        processed_report = self._resolve_processed_slots(edited_raw, template_vector, edit_report)
-        topology = classify_topology(edited_raw)
+        processed_report = self._resolve_processed_slots(
+            edited_raw,
+            template_vector,
+            edit_report,
+        )
 
+        scenario_label = self._load_optional_json(
+            edited_scene_path.parent / "scenario_label.json"
+        )
+        reference_spec, contract_source = self._load_reference_hazard_spec(
+            edited_scene_path.parent,
+            scenario_label,
+        )
+        semantic_projection_time_s = float(
+            scenario_label.get("semantic_projection_time_s", 2.1)
+        )
+        semantic_lane_center_y = float(
+            scenario_label.get("semantic_lane_center_y", 0.0)
+        )
+        road_topology_gate_enabled = bool(self.exact_road_copy_enabled)
+
+        topology = classify_topology(edited_raw)
         self._active_template = template_vector
         self._active_edit_report = processed_report
         self._active_topology_family = topology.family
@@ -95,10 +140,31 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             np.asarray(template_vector.lines.mask),
         )
         self._lane_guidance_trace = []
+        self._active_semantic_projection_time_s = semantic_projection_time_s
+        self._active_semantic_lane_center_y = semantic_lane_center_y
+        self._active_semantic_contract_source = contract_source
+        self._active_road_topology_gate_enabled = road_topology_gate_enabled
 
         if hasattr(self.alignment_evaluator, "set_reference_scene"):
             self.alignment_evaluator.set_reference_scene(template_vector)
-        if self.semantic_compositing_enabled and hasattr(self.alignment_evaluator, "set_preferred_slots"):
+        if hasattr(self.alignment_evaluator, "set_reference_spec"):
+            self.alignment_evaluator.set_reference_spec(reference_spec)
+        if hasattr(self.alignment_evaluator, "set_projection_time_s"):
+            self.alignment_evaluator.set_projection_time_s(
+                semantic_projection_time_s
+            )
+        if hasattr(self.alignment_evaluator, "set_lane_center_y"):
+            self.alignment_evaluator.set_lane_center_y(
+                semantic_lane_center_y
+            )
+        if hasattr(self.alignment_evaluator, "set_topology_gate_enabled"):
+            self.alignment_evaluator.set_topology_gate_enabled(
+                road_topology_gate_enabled
+            )
+        if (
+            self.semantic_compositing_enabled
+            and hasattr(self.alignment_evaluator, "set_preferred_slots")
+        ):
             self.alignment_evaluator.set_preferred_slots(
                 int(processed_report.get("pedestrian_index", -1)),
                 int(processed_report.get("occluder_index", -1)),
@@ -108,10 +174,13 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         try:
             summary = super().run_one(edited_scene_path, out_dir, index)
         finally:
-            # trace is copied into summary below before clearing active scene refs
             trace = list(self._lane_guidance_trace)
             topology_family = self._active_topology_family
             pair_count = len(self._active_lane_pairs)
+            projection_time_s = self._active_semantic_projection_time_s
+            lane_center_y = self._active_semantic_lane_center_y
+            semantic_contract_source = self._active_semantic_contract_source
+            topology_gate_enabled = self._active_road_topology_gate_enabled
             self._active_template = None
             self._active_edit_report = {}
             self._active_lane_pairs = []
@@ -121,9 +190,19 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         summary["road_protection_mode"] = self.road_protection_mode
         summary["topology_family"] = topology_family
         summary["lane_adjacency_pair_count"] = int(pair_count)
-        summary["lane_guidance_enabled"] = bool(self.lane_guidance_config.get("enabled", False))
+        summary["lane_guidance_enabled"] = bool(
+            self.lane_guidance_config.get("enabled", False)
+        )
         summary["lane_guidance_trace"] = trace
-        summary["protected_slots"] = self._protected_slots(processed_report) if self.semantic_compositing_enabled else {}
+        summary["semantic_contract_source"] = semantic_contract_source
+        summary["semantic_projection_time_s"] = float(projection_time_s)
+        summary["semantic_lane_center_y"] = float(lane_center_y)
+        summary["road_topology_gate_enabled"] = bool(topology_gate_enabled)
+        summary["protected_slots"] = (
+            self._protected_slots(processed_report)
+            if self.semantic_compositing_enabled
+            else {}
+        )
         save_json(out_dir / "summary.json", summary)
 
         vector_path = summary.get("scenario_cache_vector_path")
@@ -137,24 +216,45 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
                         "semantic_family": "occluded_pedestrian",
                         "diffusion_mode": self.diffusion_mode,
                         "semantic_vector_compositing": self.semantic_compositing_enabled,
-                        "semantic_projection_time_s": 2.1,
+                        "semantic_contract_source": semantic_contract_source,
+                        "semantic_projection_time_s": float(projection_time_s),
+                        "semantic_lane_center_y": float(lane_center_y),
                         "topology_family": topology_family,
                         "road_topology_lock": (
-                            "exact_b1_lines" if self.exact_road_copy_enabled
+                            "exact_b1_lines"
+                            if self.exact_road_copy_enabled
                             else "generated_with_lane_geometry_guidance"
                         ),
+                        "road_topology_gate_enabled": bool(topology_gate_enabled),
                         "road_protection_mode": self.road_protection_mode,
-                        "lane_guidance_enabled": bool(self.lane_guidance_config.get("enabled", False)),
-                        "protected_slots": self._protected_slots(processed_report) if self.semantic_compositing_enabled else {},
+                        "lane_guidance_enabled": bool(
+                            self.lane_guidance_config.get("enabled", False)
+                        ),
+                        "protected_slots": (
+                            self._protected_slots(processed_report)
+                            if self.semantic_compositing_enabled
+                            else {}
+                        ),
                     }
                 )
                 save_json(label_path, label)
         return summary
 
-    def _attempt_repair(self, init_latents, preserve_mask, map_id, attempt_idx, scene_index):
-        start_idx = self.start_step_candidates[attempt_idx % len(self.start_step_candidates)]
+    def _attempt_repair(
+        self,
+        init_latents,
+        preserve_mask,
+        map_id,
+        attempt_idx,
+        scene_index,
+    ):
+        start_idx = self.start_step_candidates[
+            attempt_idx % len(self.start_step_candidates)
+        ]
         gen = torch.Generator(device=self.args.device)
-        gen.manual_seed(int(self.args.seed) + scene_index * 1000 + attempt_idx)
+        gen.manual_seed(
+            int(self.args.seed) + scene_index * 1000 + attempt_idx
+        )
         attempt_trace = []
         with torch.no_grad():
             denoised_vectors, final_latents = self.pipeline(
@@ -176,19 +276,37 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
             {"attempt": int(attempt_idx), "steps": attempt_trace}
         )
         vector = denoised_vectors[0].torch_to_numpy(apply_sigmoid=True)
-        if self.semantic_compositing_enabled and self._active_template is not None:
-            self._composite_protected_slots(vector, self._active_template, self._active_edit_report)
+        if (
+            self.semantic_compositing_enabled
+            and self._active_template is not None
+        ):
+            self._composite_protected_slots(
+                vector,
+                self._active_template,
+                self._active_edit_report,
+            )
         return vector, final_latents, start_idx
 
     def _protected_slots(self, report: Dict[str, Any]) -> Dict[str, Any]:
         return {
-            "road_topology": "all_lines" if self.exact_road_copy_enabled else "geometry_guided_generated",
+            "road_topology": (
+                "all_lines"
+                if self.exact_road_copy_enabled
+                else "geometry_guided_generated"
+            ),
             "pedestrians": int(report.get("pedestrian_index", -1)),
-            "occluder_element": str(report.get("occluder_elem_name", "vehicles")),
+            "occluder_element": str(
+                report.get("occluder_elem_name", "vehicles")
+            ),
             "occluder_index": int(report.get("occluder_index", -1)),
         }
 
-    def _composite_protected_slots(self, vector: Any, template: Any, report: Dict[str, Any]) -> None:
+    def _composite_protected_slots(
+        self,
+        vector: Any,
+        template: Any,
+        report: Dict[str, Any],
+    ) -> None:
         if self.exact_road_copy_enabled:
             vector.lines.states = np.asarray(template.lines.states).copy()
             vector.lines.mask = np.asarray(template.lines.mask).copy()
@@ -197,16 +315,59 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
 
         pedestrian_index = int(report.get("pedestrian_index", -1))
         if pedestrian_index >= 0:
-            self._copy_slot(vector.pedestrians, template.pedestrians, pedestrian_index)
+            self._copy_slot(
+                vector.pedestrians,
+                template.pedestrians,
+                pedestrian_index,
+            )
 
-        occluder_name = str(report.get("occluder_elem_name", "vehicles"))
+        occluder_name = str(
+            report.get("occluder_elem_name", "vehicles")
+        )
         occluder_index = int(report.get("occluder_index", -1))
-        if occluder_index >= 0 and occluder_name in {"vehicles", "static_objects"}:
+        if (
+            occluder_index >= 0
+            and occluder_name in {"vehicles", "static_objects"}
+        ):
             self._copy_slot(
                 getattr(vector, occluder_name),
                 getattr(template, occluder_name),
                 occluder_index,
             )
+
+    @staticmethod
+    def _load_optional_json(path: Path) -> Dict[str, Any]:
+        if not path.exists():
+            return {}
+        with path.open("r", encoding="utf-8") as stream:
+            payload = json.load(stream)
+        return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
+    def _load_reference_hazard_spec(
+        edited_scene_dir: Path,
+        scenario_label: Dict[str, Any],
+    ) -> Tuple[Optional[HazardSemanticSpec], str]:
+        candidates = [edited_scene_dir / "hazard_spec.json"]
+        artifact_root = scenario_label.get("artifact_root")
+        if artifact_root:
+            candidates.append(
+                Path(str(artifact_root))
+                / "02_specification"
+                / "hazard_spec.json"
+            )
+
+        for path in candidates:
+            if not path.exists():
+                continue
+            try:
+                with path.open("r", encoding="utf-8") as stream:
+                    payload = json.load(stream)
+                if isinstance(payload, dict):
+                    return HazardSemanticSpec.from_dict(payload), str(path)
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                continue
+        return None, "prompt_reparsed_fallback"
 
     @staticmethod
     def _copy_slot(target_elem: Any, source_elem: Any, index: int) -> None:
@@ -215,22 +376,38 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         target_mask = np.asarray(target_elem.mask)
         source_mask = np.asarray(source_elem.mask)
         if index >= len(target_states) or index >= len(source_states):
-            raise IndexError(f"Protected slot {index} is outside decoded/template capacity")
+            raise IndexError(
+                f"Protected slot {index} is outside decoded/template capacity"
+            )
         width = min(target_states.shape[-1], source_states.shape[-1])
         target_states[index, :width] = source_states[index, :width]
         target_mask.reshape(-1)[index] = source_mask.reshape(-1)[index]
 
     @staticmethod
-    def _resolve_processed_slots(raw: Any, vector: Any, report: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_processed_slots(
+        raw: Any,
+        vector: Any,
+        report: Dict[str, Any],
+    ) -> Dict[str, Any]:
         resolved = dict(report)
         raw_pedestrian_index = int(report.get("pedestrian_index", -1))
-        resolved["pedestrian_index"] = OccludedPedestrianHalfDenoiseRunner._match_slot(
-            raw.pedestrians, raw_pedestrian_index, vector.pedestrians
+        resolved["pedestrian_index"] = (
+            OccludedPedestrianHalfDenoiseRunner._match_slot(
+                raw.pedestrians,
+                raw_pedestrian_index,
+                vector.pedestrians,
+            )
         )
-        occluder_name = str(report.get("occluder_elem_name", "vehicles"))
+        occluder_name = str(
+            report.get("occluder_elem_name", "vehicles")
+        )
         raw_occluder_index = int(report.get("occluder_index", -1))
-        resolved["occluder_index"] = OccludedPedestrianHalfDenoiseRunner._match_slot(
-            getattr(raw, occluder_name), raw_occluder_index, getattr(vector, occluder_name)
+        resolved["occluder_index"] = (
+            OccludedPedestrianHalfDenoiseRunner._match_slot(
+                getattr(raw, occluder_name),
+                raw_occluder_index,
+                getattr(vector, occluder_name),
+            )
         )
         return resolved
 
@@ -246,6 +423,12 @@ class OccludedPedestrianHalfDenoiseRunner(MultiScenarioHalfDenoiseRunner):
         if not len(valid):
             return -1
         width = min(5, states.shape[-1], target.shape[-1])
-        scales = np.asarray([1.0, 1.0, 0.5, 0.25, 0.25], dtype=np.float32)[:width]
-        errors = np.linalg.norm((states[valid, :width] - target[:width]) * scales, axis=1)
+        scales = np.asarray(
+            [1.0, 1.0, 0.5, 0.25, 0.25],
+            dtype=np.float32,
+        )[:width]
+        errors = np.linalg.norm(
+            (states[valid, :width] - target[:width]) * scales,
+            axis=1,
+        )
         return int(valid[int(np.argmin(errors))])
