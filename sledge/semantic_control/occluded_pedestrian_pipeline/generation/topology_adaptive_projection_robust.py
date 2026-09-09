@@ -1,13 +1,8 @@
-"""Robust topology-adaptive projector with global road-network gating.
+"""Robust legacy topology-adaptive projector with global road-network gating.
 
-This module keeps the historical base topology-adaptive projector intact for
-ablation/reference while adding two active protections:
-
-1. generated roads must pass SLEDGE-consistent global road validity;
-2. roadside parked/static occluders use robust rotated-footprint geometry.
-
-The road gate never repairs or copies road geometry.  A fragmented diffusion
-road is rejected so the refinement runner can sample another repair attempt.
+This module is retained for ablation/reproducibility.  It deliberately extends
+the historical global-x projector, while the normal public entry point now uses
+the path-relative v2 projector.
 """
 
 from __future__ import annotations
@@ -25,7 +20,7 @@ from sledge.semantic_control.occluded_pedestrian_pipeline.evaluation.road_graph_
 from sledge.semantic_control.occluded_pedestrian_pipeline.generation.geometry_metrics import (
     line_of_sight_intersects_box,
 )
-from sledge.semantic_control.occluded_pedestrian_pipeline.generation.topology_adaptive_projection import (
+from sledge.semantic_control.occluded_pedestrian_pipeline.generation.topology_adaptive_projection_legacy import (
     LocalRoadContext,
     TopologyAdaptiveHazardProjector as BaseTopologyAdaptiveHazardProjector,
     _lateral_half_extent,
@@ -42,7 +37,7 @@ MIN_ACTOR_FAR_SIDE_MARGIN_M = 0.10
 class RobustTopologyAdaptiveHazardProjector(
     BaseTopologyAdaptiveHazardProjector
 ):
-    """Active topology-adaptive projector with road and hazard hard gates."""
+    """Legacy global-x projector plus road and hazard hard gates."""
 
     def project(
         self,
@@ -51,13 +46,6 @@ class RobustTopologyAdaptiveHazardProjector(
         *,
         attempt_seed: int = 0,
     ):
-        """Reject fragmented generated roads before hazard re-projection.
-
-        ``vector`` is the raw diffusion candidate.  Global road validity is
-        evaluated before pedestrian/occluder geometry is changed, so the gate
-        measures the diffusion-generated road itself.
-        """
-
         road_graph = evaluate_global_road_graph_validity(vector)
         if not bool(road_graph.get("passed", False)):
             failed = [
@@ -90,6 +78,7 @@ class RobustTopologyAdaptiveHazardProjector(
         report["road_graph_policy"] = (
             "reject_fragmented_diffusion_road_no_geometry_repair"
         )
+        report["projection_coordinate_system"] = "legacy_global_x_robust_ablation"
         return projected, report
 
     def _solve_occluder(
@@ -103,7 +92,6 @@ class RobustTopologyAdaptiveHazardProjector(
         occluder_length: float,
         ego_speed: float,
     ) -> Optional[Dict[str, float]]:
-        # Preserve the already-working adjacent-lane dynamic behavior exactly.
         if variant == "adjacent_lane_dynamic":
             return super()._solve_occluder(
                 actor_display=actor_display,
