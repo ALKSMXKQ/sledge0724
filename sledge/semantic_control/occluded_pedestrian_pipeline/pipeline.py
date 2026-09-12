@@ -767,6 +767,15 @@ def run_half_denoise(
     max_scenes: Optional[int] = None,
     repair_attempts: int = 6,
     save_visuals: bool = False,
+    lane_geometry_guidance_enabled: bool = False,
+    lane_geometry_guidance_scale: float = 0.05,
+    lane_geometry_guidance_start_fraction: float = 0.50,
+    lane_geometry_heading_jump_threshold: float = 0.2617993877991494,
+    lane_geometry_jump_weight: float = 1.0,
+    lane_geometry_instability_weight: float = 0.5,
+    lane_geometry_mask_threshold: float = 0.30,
+    lane_geometry_max_update_norm: float = 0.10,
+    lane_geometry_guidance_diagnostics: bool = False,
 ) -> Dict[str, Any]:
     """Run one B2 mode and evaluate all expected samples."""
 
@@ -812,6 +821,15 @@ def run_half_denoise(
             else repair_attempts
         ),
         seed=0,
+        lane_geometry_guidance_enabled=lane_geometry_guidance_enabled,
+        lane_geometry_guidance_scale=lane_geometry_guidance_scale,
+        lane_geometry_guidance_start_fraction=lane_geometry_guidance_start_fraction,
+        lane_geometry_heading_jump_threshold=lane_geometry_heading_jump_threshold,
+        lane_geometry_jump_weight=lane_geometry_jump_weight,
+        lane_geometry_instability_weight=lane_geometry_instability_weight,
+        lane_geometry_mask_threshold=lane_geometry_mask_threshold,
+        lane_geometry_max_update_norm=lane_geometry_max_update_norm,
+        lane_geometry_guidance_diagnostics=lane_geometry_guidance_diagnostics,
         alignment_threshold=0.70,
         min_preservation_ratio=0.95,
         # Raw baseline must keep failing generations so their failure modes are
@@ -884,6 +902,15 @@ def run_diffusion_comparison(
     max_scenes: Optional[int] = None,
     repair_attempts: int = 6,
     save_visuals: bool = False,
+    lane_geometry_guidance_enabled: bool = False,
+    lane_geometry_guidance_scale: float = 0.05,
+    lane_geometry_guidance_start_fraction: float = 0.50,
+    lane_geometry_heading_jump_threshold: float = 0.2617993877991494,
+    lane_geometry_jump_weight: float = 1.0,
+    lane_geometry_instability_weight: float = 0.5,
+    lane_geometry_mask_threshold: float = 0.30,
+    lane_geometry_max_update_norm: float = 0.10,
+    lane_geometry_guidance_diagnostics: bool = False,
 ) -> Dict[str, Any]:
     """Run raw baseline first, then the semantic-protected comparison."""
 
@@ -897,6 +924,15 @@ def run_diffusion_comparison(
         max_scenes=max_scenes,
         repair_attempts=repair_attempts,
         save_visuals=save_visuals,
+        lane_geometry_guidance_enabled=lane_geometry_guidance_enabled,
+        lane_geometry_guidance_scale=lane_geometry_guidance_scale,
+        lane_geometry_guidance_start_fraction=lane_geometry_guidance_start_fraction,
+        lane_geometry_heading_jump_threshold=lane_geometry_heading_jump_threshold,
+        lane_geometry_jump_weight=lane_geometry_jump_weight,
+        lane_geometry_instability_weight=lane_geometry_instability_weight,
+        lane_geometry_mask_threshold=lane_geometry_mask_threshold,
+        lane_geometry_max_update_norm=lane_geometry_max_update_norm,
+        lane_geometry_guidance_diagnostics=lane_geometry_guidance_diagnostics,
     )
     protected = run_half_denoise(
         run_root=run_root,
@@ -908,6 +944,15 @@ def run_diffusion_comparison(
         max_scenes=max_scenes,
         repair_attempts=repair_attempts,
         save_visuals=save_visuals,
+        lane_geometry_guidance_enabled=lane_geometry_guidance_enabled,
+        lane_geometry_guidance_scale=lane_geometry_guidance_scale,
+        lane_geometry_guidance_start_fraction=lane_geometry_guidance_start_fraction,
+        lane_geometry_heading_jump_threshold=lane_geometry_heading_jump_threshold,
+        lane_geometry_jump_weight=lane_geometry_jump_weight,
+        lane_geometry_instability_weight=lane_geometry_instability_weight,
+        lane_geometry_mask_threshold=lane_geometry_mask_threshold,
+        lane_geometry_max_update_norm=lane_geometry_max_update_norm,
+        lane_geometry_guidance_diagnostics=lane_geometry_guidance_diagnostics,
     )
     comparison = compare_modes(
         raw.get("retention", {}),

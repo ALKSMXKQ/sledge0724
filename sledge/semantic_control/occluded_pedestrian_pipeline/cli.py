@@ -468,6 +468,20 @@ def _add_refine_args(
         "--save-visuals",
         action="store_true",
     )
+    parser.add_argument("--lane-geometry-guidance-enabled", action="store_true")
+    parser.add_argument("--lane-geometry-guidance-scale", type=float, default=0.05)
+    parser.add_argument("--lane-geometry-guidance-start-fraction", type=float, default=0.50)
+    parser.add_argument(
+        "--lane-geometry-heading-jump-threshold",
+        type=float,
+        default=0.2617993877991494,
+        help="Unpenalized adjacent-segment heading change in radians.",
+    )
+    parser.add_argument("--lane-geometry-jump-weight", type=float, default=1.0)
+    parser.add_argument("--lane-geometry-instability-weight", type=float, default=0.5)
+    parser.add_argument("--lane-geometry-mask-threshold", type=float, default=0.30)
+    parser.add_argument("--lane-geometry-max-update-norm", type=float, default=0.10)
+    parser.add_argument("--lane-geometry-guidance-diagnostics", action="store_true")
     if include_mode:
         parser.add_argument(
             "--mode",
@@ -805,6 +819,15 @@ def _run_refine(
         "max_scenes": args.max_refine_scenes,
         "repair_attempts": args.repair_attempts,
         "save_visuals": args.save_visuals,
+        "lane_geometry_guidance_enabled": args.lane_geometry_guidance_enabled,
+        "lane_geometry_guidance_scale": args.lane_geometry_guidance_scale,
+        "lane_geometry_guidance_start_fraction": args.lane_geometry_guidance_start_fraction,
+        "lane_geometry_heading_jump_threshold": args.lane_geometry_heading_jump_threshold,
+        "lane_geometry_jump_weight": args.lane_geometry_jump_weight,
+        "lane_geometry_instability_weight": args.lane_geometry_instability_weight,
+        "lane_geometry_mask_threshold": args.lane_geometry_mask_threshold,
+        "lane_geometry_max_update_norm": args.lane_geometry_max_update_norm,
+        "lane_geometry_guidance_diagnostics": args.lane_geometry_guidance_diagnostics,
     }
     if mode == "both":
         return run_diffusion_comparison(**common)

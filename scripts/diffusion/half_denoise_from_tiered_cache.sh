@@ -10,7 +10,7 @@ OUTPUT_DIR=/home16T/home8T_1/leitingting/sledge_workspace/exp/exp/half_denoise_f
 
 export CUDA_VISIBLE_DEVICES=1
 
-python $SLEDGE_DEVKIT_ROOT/sledge/script/run_half_denoise_from_tiered_cache.py \
+python $SLEDGE_DEVKIT_ROOT/sledge/script/generation/half_diffusion/run_half_denoise_from_tiered_cache.py \
   --original-dir "$ORIGINAL_DIR" \
   --edited-dir "$EDITED_DIR" \
   --output "$OUTPUT_DIR" \

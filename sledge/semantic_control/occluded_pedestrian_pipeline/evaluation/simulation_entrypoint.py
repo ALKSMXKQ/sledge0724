@@ -60,7 +60,7 @@ def _integrate_metric_files_synchronously(self: MetricFileCallback) -> None:
 
 MetricFileCallback.on_run_simulation_end = _integrate_metric_files_synchronously
 
-from sledge.script.run_simulation import main  # noqa: E402
+from sledge.script.evaluation.run_simulation import main  # noqa: E402
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ FILENAME_WITHOUT_EXTENSION="${FILENAME%.*}"
 export SLEDGE_RANDOM_SAMPLE=1000
 export SLEDGE_RANDOM_SEED=42
 
-python "${SLEDGE_ROOT}/sledge/script/run_simulation.py" \
+python "${SLEDGE_ROOT}/sledge/script/evaluation/run_simulation.py" \
     +simulation="${CHALLENGE}" \
     planner=flow_planner \
     planner.flow_planner.config_path="${CONFIG_FILE}" \

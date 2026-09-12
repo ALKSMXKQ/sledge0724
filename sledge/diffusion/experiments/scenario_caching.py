@@ -40,6 +40,21 @@ def run_scenario_caching(cfg: DictConfig) -> None:
             num_inference_timesteps=cfg.num_inference_timesteps,
             guidance_scale=cfg.guidance_scale,
             num_classes=cfg.num_classes,
+            lane_geometry_guidance_enabled=cfg.get("lane_geometry_guidance_enabled", False),
+            lane_geometry_guidance_scale=cfg.get("lane_geometry_guidance_scale", 0.05),
+            lane_geometry_guidance_start_fraction=cfg.get(
+                "lane_geometry_guidance_start_fraction", 0.50
+            ),
+            lane_geometry_heading_jump_threshold=cfg.get(
+                "lane_geometry_heading_jump_threshold", 0.2617993877991494
+            ),
+            lane_geometry_jump_weight=cfg.get("lane_geometry_jump_weight", 1.0),
+            lane_geometry_instability_weight=cfg.get("lane_geometry_instability_weight", 0.5),
+            lane_geometry_mask_threshold=cfg.get("lane_geometry_mask_threshold", 0.30),
+            lane_geometry_max_update_norm=cfg.get("lane_geometry_max_update_norm", 0.10),
+            lane_geometry_guidance_diagnostics=cfg.get(
+                "lane_geometry_guidance_diagnostics", False
+            ),
         )
         for sledge_vector, map_id in zip(sledge_vector_list, class_labels):
             sledge_vector_numpy: SledgeVector = sledge_vector.torch_to_numpy()
