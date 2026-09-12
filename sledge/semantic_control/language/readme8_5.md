@@ -91,7 +91,7 @@ python -m sledge.script.language.run_hierarchical_language_pipeline \
 也保留了兼容入口：
 
 ```bash
-python -m sledge.script.run_hierarchical_language_pipeline \
+python -m sledge.script.language.run_hierarchical_language_pipeline \
   --prompt "A child suddenly emerges from behind a parked truck into the ego lane."
 ```
 
@@ -129,7 +129,7 @@ sledge/semantic_control/language/hierarchical_ontology.py
 sledge/semantic_control/language/hierarchical_pipeline.py
 sledge/semantic_control/language/tests/test_hierarchical_pipeline.py
 sledge/script/language/run_hierarchical_language_pipeline.py
-sledge/script/run_hierarchical_language_pipeline.py
+sledge/script/language/run_hierarchical_language_pipeline.py
 ```
 
 作用分别是：

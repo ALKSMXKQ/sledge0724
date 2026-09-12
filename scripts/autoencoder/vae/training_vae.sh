@@ -4,7 +4,7 @@ USE_CACHE_WITHOUT_DATASET=True
 SEED=0
 
 
-python $SLEDGE_DEVKIT_ROOT/sledge/script/run_autoencoder.py \
+python $SLEDGE_DEVKIT_ROOT/sledge/script/generation/baseline/run_autoencoder.py \
 py_func=training \
 seed=$SEED \
 job_name=$JOB_NAME \

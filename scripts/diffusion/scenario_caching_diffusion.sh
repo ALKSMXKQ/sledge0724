@@ -7,7 +7,7 @@ SEED=0
 # 设置环境变量
 export CUDA_VISIBLE_DEVICES=1
 
-python $SLEDGE_DEVKIT_ROOT/sledge/script/run_diffusion.py \
+python $SLEDGE_DEVKIT_ROOT/sledge/script/generation/baseline/run_diffusion.py \
 py_func=scenario_caching \
 seed=$SEED \
 job_name=$JOB_NAME \

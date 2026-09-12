@@ -9,7 +9,7 @@
 ### 1）`flow_planner_simulation.sh`
 
 * 入口改成
-  `python "${SLEDGE_ROOT}/sledge/script/run_simulation.py"`
+  `python "${SLEDGE_ROOT}/sledge/script/evaluation/run_simulation.py"`
 * planner 改成
   `planner=flow_planner`
 * 传入：

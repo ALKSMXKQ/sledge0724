@@ -5,7 +5,7 @@ SEED=0
 
 for MAP in "filter_pgh" "filter_lav" "filter_sgp" "filter_bos" 
 do
-    python $SLEDGE_DEVKIT_ROOT/sledge/script/run_autoencoder.py \
+    python $SLEDGE_DEVKIT_ROOT/sledge/script/generation/baseline/run_autoencoder.py \
     py_func=feature_caching \
     seed=$SEED \
     job_name=$JOB_NAME \

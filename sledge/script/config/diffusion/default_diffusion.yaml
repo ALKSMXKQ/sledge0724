@@ -30,6 +30,17 @@ num_classes: 4
 guidance_scale: 4.0
 num_inference_timesteps: 100
 
+# Inference-time decoded-lane guidance (disabled for exact legacy behavior).
+lane_geometry_guidance_enabled: false
+lane_geometry_guidance_scale: 0.05
+lane_geometry_guidance_start_fraction: 0.50
+lane_geometry_heading_jump_threshold: 0.2617993877991494  # 15 degrees
+lane_geometry_jump_weight: 1.0
+lane_geometry_instability_weight: 0.5
+lane_geometry_mask_threshold: 0.30
+lane_geometry_max_update_norm: 0.10
+lane_geometry_guidance_diagnostics: false
+
 autoencoder_checkpoint: ???
 diffusion_checkpoint: null
 

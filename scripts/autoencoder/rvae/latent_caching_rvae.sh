@@ -4,7 +4,7 @@ AUTOENCODER_CHECKPOINT=/home16T/home8T_1/leitingting/sledge_workspace/exp/exp/tr
 USE_CACHE_WITHOUT_DATASET=False
 SEED=0
 
-python $SLEDGE_DEVKIT_ROOT/sledge/script/run_autoencoder.py \
+python $SLEDGE_DEVKIT_ROOT/sledge/script/generation/baseline/run_autoencoder.py \
 py_func=latent_caching \
 seed=$SEED \
 job_name=$JOB_NAME \

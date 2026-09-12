@@ -26,7 +26,7 @@ echo "=== File check ==="
 test -f "$ARGS_FILE"
 test -f "$CKPT_FILE"
 
-python "$SLEDGE_DEVKIT_ROOT/sledge/script/run_simulation.py" \
+python "$SLEDGE_DEVKIT_ROOT/sledge/script/evaluation/run_simulation.py" \
   +simulation="$CHALLENGE" \
   planner=diffusion_planner \
   planner.diffusion_planner.config.args_file="$ARGS_FILE" \

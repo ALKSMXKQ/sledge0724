@@ -5,7 +5,7 @@ The script converts structured FARS crash records into:
 
 1. a short natural-language hazardous-scene description, and
 2. an `expected` slot template compatible with
-   `sledge/script/language/compare_language_control_experiments.py`.
+   `sledge/script/evaluation/compare_language_control_experiments.py`.
 
 FARS source:
 https://www.nhtsa.gov/research-data/fatality-analysis-reporting-system-fars

@@ -79,6 +79,21 @@ def build_argparser() -> argparse.ArgumentParser:
     parser.add_argument("--repair-attempts", type=int, default=6)
     parser.add_argument("--seed", type=int, default=0)
 
+    parser.add_argument("--lane-geometry-guidance-enabled", action="store_true")
+    parser.add_argument("--lane-geometry-guidance-scale", type=float, default=0.05)
+    parser.add_argument("--lane-geometry-guidance-start-fraction", type=float, default=0.50)
+    parser.add_argument(
+        "--lane-geometry-heading-jump-threshold",
+        type=float,
+        default=float(np.deg2rad(15.0)),
+        help="Unpenalized adjacent-segment heading change in radians.",
+    )
+    parser.add_argument("--lane-geometry-jump-weight", type=float, default=1.0)
+    parser.add_argument("--lane-geometry-instability-weight", type=float, default=0.5)
+    parser.add_argument("--lane-geometry-mask-threshold", type=float, default=0.30)
+    parser.add_argument("--lane-geometry-max-update-norm", type=float, default=0.10)
+    parser.add_argument("--lane-geometry-guidance-diagnostics", action="store_true")
+
     parser.add_argument("--alignment-threshold", type=float, default=DEFAULT_ALIGNMENT_THRESHOLD)
     parser.add_argument("--min-preservation-ratio", type=float, default=0.95)
     parser.add_argument("--strict-save-only-passing", action="store_true", default=True)
@@ -625,6 +640,15 @@ class MultiScenarioHalfDenoiseRunner:
                 preserve_mask=preserve_mask,
                 generator=gen,
                 return_latents=True,
+                lane_geometry_guidance_enabled=self.args.lane_geometry_guidance_enabled,
+                lane_geometry_guidance_scale=self.args.lane_geometry_guidance_scale,
+                lane_geometry_guidance_start_fraction=self.args.lane_geometry_guidance_start_fraction,
+                lane_geometry_heading_jump_threshold=self.args.lane_geometry_heading_jump_threshold,
+                lane_geometry_jump_weight=self.args.lane_geometry_jump_weight,
+                lane_geometry_instability_weight=self.args.lane_geometry_instability_weight,
+                lane_geometry_mask_threshold=self.args.lane_geometry_mask_threshold,
+                lane_geometry_max_update_norm=self.args.lane_geometry_max_update_norm,
+                lane_geometry_guidance_diagnostics=self.args.lane_geometry_guidance_diagnostics,
             )
         vector = denoised_vectors[0].torch_to_numpy(apply_sigmoid=True)
         return vector, final_latents, start_idx
@@ -688,6 +712,7 @@ class MultiScenarioHalfDenoiseRunner:
                 attempt_idx=attempt_idx,
                 scene_index=index,
             )
+            lane_guidance_diagnostics = self.pipeline.last_lane_geometry_guidance_diagnostics[0]
             repaired_alignment = self.alignment_evaluator.evaluate(repaired_vector, prompt_spec)
             repaired_semantic = summarize_multiscenario_semantics(
                 repaired_alignment, prompt_spec, repaired_vector, self.args.alignment_threshold
@@ -710,6 +735,7 @@ class MultiScenarioHalfDenoiseRunner:
                 "preservation_ratio": float(preservation_ratio),
                 "compliance": repaired_compliance,
                 "used_start_timestep_index": int(used_start_idx),
+                "lane_geometry_guidance": lane_guidance_diagnostics,
                 "rank_score": float(rank_score),
             }
             candidate_rows.append(row)
