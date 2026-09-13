@@ -1,0 +1,8 @@
+.............                                                            [100%]
+=============================== warnings summary ===============================
+../../../../../home/leitingting/anaconda3/envs/sledge/lib/python3.9/site-packages/torch/cuda/__init__.py:619
+  /home/leitingting/anaconda3/envs/sledge/lib/python3.9/site-packages/torch/cuda/__init__.py:619: UserWarning: Can't initialize NVML
+    warnings.warn("Can't initialize NVML")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+13 passed, 1 warning in 4.29s

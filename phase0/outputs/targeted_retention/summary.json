@@ -1,0 +1,1038 @@
+{
+  "status": "COMPLETE",
+  "sample_count": 900,
+  "seed": 9102026,
+  "per_type_requested": 150,
+  "sampling_estimand": "Log-balanced selected target scenes; not a scene-uniform estimate of the entire cache",
+  "unknown_in_targeted_statistics": 0,
+  "unknown_resolution": {
+    "inventory_count": 500356,
+    "originally_unknown": 137977,
+    "resolved_unknown": 0,
+    "unresolved_unknown": 137977,
+    "reasons": {
+      "database_unavailable": 97293,
+      "unlabeled_in_authoritative_db": 40684
+    },
+    "source": "Native cache directory schema, checked against nuPlan SQLite scenario_tag and lidar_pc",
+    "upstream_reason": "get_scenarios_from_db LEFT OUTER JOIN scenario_tag; null scenario_type becomes DEFAULT_SCENARIO_NAME=unknown in scenario filter utils",
+    "historical_1000_note": "Original summary records 295 unknown but lacks its full token list. This run accounts for every currently cached unknown token, without claiming to recover the exact historical 295."
+  },
+  "gate_0b3_summary_sha256": "9581763143428f15c99b015effcd129bd00d97c8b1dc714a5f9e0e78c9dfc447",
+  "provenance": {
+    "python": "/home/leitingting/anaconda3/envs/sledge/bin/python",
+    "conda_env": "sledge",
+    "packages": {
+      "numpy": "1.23.4",
+      "torch": "2.3.0",
+      "opencv-python": "4.9.0.80",
+      "hydra-core": "1.3.2",
+      "nuplan-devkit": "1.2.2",
+      "scipy": "1.13.1",
+      "shapely": "2.0.7"
+    },
+    "nuplan_source": "/home16T/home8T_1/leitingting/nuplan-devkit/nuplan/__init__.py",
+    "SLEDGE_EXP_ROOT": "/home16T/home8T_1/leitingting/sledge_workspace/exp",
+    "command": [
+      "/home/leitingting/anaconda3/envs/sledge/bin/python",
+      "/home16T/home8T_1/leitingting/sledge_workspace/sledge/phase0/src/phase0_audit/targeted_retention.py",
+      "--cache-root",
+      "/home16T/home8T_1/leitingting/sledge_workspace/exp/caches/autoencoder_cache",
+      "--db-root",
+      "/home16T/home8T_1/leitingting/sledge_workspace/dataset/nuplan-v1.1/splits",
+      "--output-dir",
+      "phase0/outputs/targeted_retention",
+      "--sample-size",
+      "150",
+      "--seed",
+      "9102026"
+    ],
+    "config_source": "sledge/script/config/common/autoencoder_model/rvae_model.yaml",
+    "config_sha256": "5509f751b32cb4ce568fb287346d5ee959dff9c767a6c4fa4f6917de97ce7c8b",
+    "config": {
+      "radius": 100,
+      "pose_interval": 1.0,
+      "frame": [
+        64,
+        64
+      ],
+      "num_lines": 50,
+      "num_vehicles": 50,
+      "num_pedestrians": 20,
+      "num_static_objects": 30,
+      "num_green_lights": 20,
+      "num_red_lights": 20,
+      "num_line_poses": 20,
+      "vehicle_max_velocity": 15,
+      "pedestrian_max_velocity": 2,
+      "pixel_size": 0.25,
+      "line_dots_radius": 0,
+      "threshold": 0.3,
+      "model_name": "resnet50",
+      "down_factor": 32,
+      "num_input_channels": 12,
+      "latent_channel": 64,
+      "num_encoder_layers": 0,
+      "num_decoder_layers": 6,
+      "patch_size": 1,
+      "dropout": 0.1,
+      "num_head": 8,
+      "d_model": 512,
+      "d_ffn": 2048,
+      "activation": "relu",
+      "normalize_before": false,
+      "positional_embedding": "sine",
+      "split_latent": true,
+      "head_d_ffn": 1024,
+      "head_num_layers": 1,
+      "num_line_queries": 50,
+      "num_vehicle_queries": 50,
+      "num_pedestrian_queries": 20,
+      "num_static_object_queries": 30,
+      "num_green_light_queries": 20,
+      "num_red_light_queries": 20,
+      "line_reconstruction_weight": 2,
+      "line_ce_weight": 5,
+      "box_reconstruction_weight": 2,
+      "box_ce_weight": 5,
+      "ego_reconstruction_weight": 1,
+      "kl_weight": 0.1,
+      "norm_by_count": false
+    },
+    "processor_source": "/home16T/home8T_1/leitingting/sledge_workspace/sledge/sledge/autoencoder/preprocessing/feature_builders/sledge/sledge_feature_processing.py",
+    "processor_sha256": "af1d906d03276767ea98e5b41c3272743e7ec4f8222c1eeb4413596e70fdb38c",
+    "replay_sha256": "d7721ea74b8a2f2b71a810b894bdc19f065cb358b778c260fedafb6a407c3076"
+  },
+  "by_scenario_type": {
+    "near_pedestrian_on_crosswalk": {
+      "vehicles": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 144,
+        "scene_fraction_with_cap_drop": 0.0,
+        "total_raw": 2908,
+        "total_in_frame": 1116,
+        "total_kept": 1116,
+        "total_cap_dropped": 0,
+        "total_spatial_crop_dropped": 1792,
+        "p_kept_given_inside": 1.0,
+        "overflow": {
+          "n": 150,
+          "min": -50.0,
+          "median": -44.0,
+          "p75": -40.0,
+          "p90": -33.900000000000006,
+          "p95": -31.0,
+          "max": -21.0
+        },
+        "positive_overflow": {
+          "n": 0
+        },
+        "d_K": {
+          "n": 144,
+          "min": 3.8122191429138184,
+          "median": 32.19828796386719,
+          "p75": 36.62465000152588,
+          "p90": 40.889502716064456,
+          "p95": 42.343039894104,
+          "max": 43.58778381347656
+        },
+        "d_first_drop": {
+          "n": 0
+        },
+        "boundary_gap": {
+          "n": 0
+        }
+      },
+      "pedestrians": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 144,
+        "scene_fraction_with_cap_drop": 0.38666666666666666,
+        "total_raw": 6300,
+        "total_in_frame": 3128,
+        "total_kept": 1756,
+        "total_cap_dropped": 1372,
+        "total_spatial_crop_dropped": 3172,
+        "p_kept_given_inside": 0.5613810741687979,
+        "overflow": {
+          "n": 150,
+          "min": -20.0,
+          "median": -8.0,
+          "p75": 10.0,
+          "p90": 33.099999999999994,
+          "p95": 48.0,
+          "max": 99.0
+        },
+        "positive_overflow": {
+          "n": 58,
+          "min": 1.0,
+          "median": 20.0,
+          "p75": 33.75,
+          "p90": 52.400000000000034,
+          "p95": 66.3,
+          "max": 99.0
+        },
+        "d_K": {
+          "n": 144,
+          "min": 8.514350891113281,
+          "median": 25.54283618927002,
+          "p75": 31.744834899902344,
+          "p90": 33.997904586792,
+          "p95": 35.46735763549805,
+          "max": 43.16259002685547
+        },
+        "d_first_drop": {
+          "n": 58,
+          "min": 8.664170265197754,
+          "median": 22.428982734680176,
+          "p75": 27.358092784881592,
+          "p90": 31.27822666168213,
+          "p95": 34.038818550109866,
+          "max": 43.47761535644531
+        },
+        "boundary_gap": {
+          "n": 58,
+          "min": 0.00478363037109375,
+          "median": 0.3284416198730469,
+          "p75": 0.793210506439209,
+          "p90": 1.347605323791504,
+          "p95": 1.983935165405273,
+          "max": 3.8328189849853516
+        }
+      },
+      "static_objects": {
+        "sample_count": 150,
+        "nonempty_scene_count": 149,
+        "in_frame_nonempty_scene_count": 144,
+        "scene_fraction_with_cap_drop": 0.56,
+        "total_raw": 11242,
+        "total_in_frame": 4508,
+        "total_kept": 3029,
+        "total_cap_dropped": 1479,
+        "total_spatial_crop_dropped": 6734,
+        "p_kept_given_inside": 0.6719165927240461,
+        "overflow": {
+          "n": 150,
+          "min": -30.0,
+          "median": 5.5,
+          "p75": 17.0,
+          "p90": 24.099999999999994,
+          "p95": 31.64999999999995,
+          "max": 57.0
+        },
+        "positive_overflow": {
+          "n": 84,
+          "min": 1.0,
+          "median": 16.0,
+          "p75": 21.25,
+          "p90": 30.0,
+          "p95": 37.69999999999999,
+          "max": 57.0
+        },
+        "d_K": {
+          "n": 144,
+          "min": 5.343318462371826,
+          "median": 24.947877883911133,
+          "p75": 30.517735481262207,
+          "p90": 34.30323448181152,
+          "p95": 37.09689769744873,
+          "max": 41.64933395385742
+        },
+        "d_first_drop": {
+          "n": 84,
+          "min": 17.64535140991211,
+          "median": 23.802067756652832,
+          "p75": 26.42376136779785,
+          "p90": 30.103582382202152,
+          "p95": 33.92723121643066,
+          "max": 39.90706253051758
+        },
+        "boundary_gap": {
+          "n": 84,
+          "min": 0.0002117156982421875,
+          "median": 0.5301456451416016,
+          "p75": 0.9648995399475098,
+          "p90": 1.4615276336669922,
+          "p95": 1.7454987525939925,
+          "max": 4.473384857177734
+        }
+      }
+    },
+    "traversing_crosswalk": {
+      "vehicles": {
+        "sample_count": 150,
+        "nonempty_scene_count": 142,
+        "in_frame_nonempty_scene_count": 115,
+        "scene_fraction_with_cap_drop": 0.0,
+        "total_raw": 1703,
+        "total_in_frame": 711,
+        "total_kept": 711,
+        "total_cap_dropped": 0,
+        "total_spatial_crop_dropped": 992,
+        "p_kept_given_inside": 1.0,
+        "overflow": {
+          "n": 150,
+          "min": -50.0,
+          "median": -47.0,
+          "p75": -43.0,
+          "p90": -37.0,
+          "p95": -33.45000000000002,
+          "max": -23.0
+        },
+        "positive_overflow": {
+          "n": 0
+        },
+        "d_K": {
+          "n": 115,
+          "min": 4.082433700561523,
+          "median": 30.804834365844727,
+          "p75": 34.12874412536621,
+          "p90": 37.46903610229492,
+          "p95": 40.04573974609375,
+          "max": 42.5866584777832
+        },
+        "d_first_drop": {
+          "n": 0
+        },
+        "boundary_gap": {
+          "n": 0
+        }
+      },
+      "pedestrians": {
+        "sample_count": 150,
+        "nonempty_scene_count": 124,
+        "in_frame_nonempty_scene_count": 101,
+        "scene_fraction_with_cap_drop": 0.08,
+        "total_raw": 1740,
+        "total_in_frame": 1016,
+        "total_kept": 603,
+        "total_cap_dropped": 413,
+        "total_spatial_crop_dropped": 724,
+        "p_kept_given_inside": 0.593503937007874,
+        "overflow": {
+          "n": 150,
+          "min": -20.0,
+          "median": -18.0,
+          "p75": -15.0,
+          "p90": -7.900000000000006,
+          "p95": 20.549999999999983,
+          "max": 73.0
+        },
+        "positive_overflow": {
+          "n": 12,
+          "min": 6.0,
+          "median": 30.0,
+          "p75": 45.5,
+          "p90": 63.5,
+          "p95": 68.05,
+          "max": 73.0
+        },
+        "d_K": {
+          "n": 101,
+          "min": 5.34351921081543,
+          "median": 28.680402755737305,
+          "p75": 33.758811950683594,
+          "p90": 37.845645904541016,
+          "p95": 39.49386978149414,
+          "max": 42.374122619628906
+        },
+        "d_first_drop": {
+          "n": 12,
+          "min": 11.104092597961426,
+          "median": 23.047749519348145,
+          "p75": 26.915533542633057,
+          "p90": 27.968641471862792,
+          "p95": 28.83033876419067,
+          "max": 29.8720760345459
+        },
+        "boundary_gap": {
+          "n": 12,
+          "min": 0.005116462707519531,
+          "median": 0.14666080474853516,
+          "p75": 0.31894826889038086,
+          "p90": 1.1347778320312503,
+          "p95": 1.6944634437561028,
+          "max": 2.3089847564697266
+        }
+      },
+      "static_objects": {
+        "sample_count": 150,
+        "nonempty_scene_count": 128,
+        "in_frame_nonempty_scene_count": 112,
+        "scene_fraction_with_cap_drop": 0.15333333333333332,
+        "total_raw": 3651,
+        "total_in_frame": 1951,
+        "total_kept": 1331,
+        "total_cap_dropped": 620,
+        "total_spatial_crop_dropped": 1700,
+        "p_kept_given_inside": 0.6822142491030241,
+        "overflow": {
+          "n": 150,
+          "min": -30.0,
+          "median": -26.0,
+          "p75": -14.25,
+          "p90": 7.0999999999999375,
+          "p95": 44.19999999999993,
+          "max": 54.0
+        },
+        "positive_overflow": {
+          "n": 23,
+          "min": 2.0,
+          "median": 27.0,
+          "p75": 48.0,
+          "p90": 50.6,
+          "p95": 52.8,
+          "max": 54.0
+        },
+        "d_K": {
+          "n": 112,
+          "min": 6.532079219818115,
+          "median": 27.330163955688477,
+          "p75": 32.94887638092041,
+          "p90": 35.93978271484375,
+          "p95": 37.13205509185791,
+          "max": 40.392642974853516
+        },
+        "d_first_drop": {
+          "n": 23,
+          "min": 17.57135009765625,
+          "median": 20.454362869262695,
+          "p75": 29.582508087158203,
+          "p90": 35.26105422973633,
+          "p95": 36.90214462280273,
+          "max": 37.38764572143555
+        },
+        "boundary_gap": {
+          "n": 23,
+          "min": 0.038219451904296875,
+          "median": 1.5275115966796875,
+          "p75": 1.6822090148925781,
+          "p90": 1.7044265747070313,
+          "p95": 3.2305450439453103,
+          "max": 4.624021530151367
+        }
+      }
+    },
+    "on_pickup_dropoff": {
+      "vehicles": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 147,
+        "scene_fraction_with_cap_drop": 0.0,
+        "total_raw": 2906,
+        "total_in_frame": 1398,
+        "total_kept": 1398,
+        "total_cap_dropped": 0,
+        "total_spatial_crop_dropped": 1508,
+        "p_kept_given_inside": 1.0,
+        "overflow": {
+          "n": 150,
+          "min": -50.0,
+          "median": -41.0,
+          "p75": -36.25,
+          "p90": -33.0,
+          "p95": -31.450000000000017,
+          "max": -15.0
+        },
+        "positive_overflow": {
+          "n": 0
+        },
+        "d_K": {
+          "n": 147,
+          "min": 9.280845642089844,
+          "median": 34.19565963745117,
+          "p75": 38.96682357788086,
+          "p90": 41.06564788818359,
+          "p95": 41.51733322143555,
+          "max": 43.56502151489258
+        },
+        "d_first_drop": {
+          "n": 0
+        },
+        "boundary_gap": {
+          "n": 0
+        }
+      },
+      "pedestrians": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 141,
+        "scene_fraction_with_cap_drop": 0.3,
+        "total_raw": 4437,
+        "total_in_frame": 3059,
+        "total_kept": 1761,
+        "total_cap_dropped": 1298,
+        "total_spatial_crop_dropped": 1378,
+        "p_kept_given_inside": 0.5756783262504086,
+        "overflow": {
+          "n": 150,
+          "min": -20.0,
+          "median": -7.5,
+          "p75": 7.0,
+          "p90": 35.099999999999994,
+          "p95": 50.099999999999966,
+          "max": 84.0
+        },
+        "positive_overflow": {
+          "n": 45,
+          "min": 1.0,
+          "median": 24.0,
+          "p75": 41.0,
+          "p90": 59.0,
+          "p95": 67.19999999999999,
+          "max": 84.0
+        },
+        "d_K": {
+          "n": 141,
+          "min": 4.185429096221924,
+          "median": 27.143285751342773,
+          "p75": 32.55361557006836,
+          "p90": 36.88103103637695,
+          "p95": 38.186256408691406,
+          "max": 42.0452880859375
+        },
+        "d_first_drop": {
+          "n": 45,
+          "min": 10.838749885559082,
+          "median": 20.747962951660156,
+          "p75": 24.99683380126953,
+          "p90": 27.412118911743164,
+          "p95": 31.16056518554687,
+          "max": 34.47470474243164
+        },
+        "boundary_gap": {
+          "n": 45,
+          "min": 0.00379180908203125,
+          "median": 0.28090953826904297,
+          "p75": 0.5240478515625,
+          "p90": 0.7491340637207032,
+          "p95": 1.124026870727538,
+          "max": 2.87640380859375
+        }
+      },
+      "static_objects": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 147,
+        "scene_fraction_with_cap_drop": 0.56,
+        "total_raw": 10397,
+        "total_in_frame": 5109,
+        "total_kept": 3763,
+        "total_cap_dropped": 1346,
+        "total_spatial_crop_dropped": 5288,
+        "p_kept_given_inside": 0.7365433548639656,
+        "overflow": {
+          "n": 150,
+          "min": -30.0,
+          "median": 4.0,
+          "p75": 17.75,
+          "p90": 24.0,
+          "p95": 32.099999999999966,
+          "max": 39.0
+        },
+        "positive_overflow": {
+          "n": 84,
+          "min": 1.0,
+          "median": 15.0,
+          "p75": 22.0,
+          "p90": 30.10000000000001,
+          "p95": 34.0,
+          "max": 39.0
+        },
+        "d_K": {
+          "n": 147,
+          "min": 16.478153228759766,
+          "median": 31.288095474243164,
+          "p75": 36.77626419067383,
+          "p90": 40.41661758422852,
+          "p95": 41.16766242980957,
+          "max": 44.29172134399414
+        },
+        "d_first_drop": {
+          "n": 84,
+          "min": 17.02918815612793,
+          "median": 22.93570327758789,
+          "p75": 31.977168083190918,
+          "p90": 36.68351593017578,
+          "p95": 39.96625900268555,
+          "max": 44.008914947509766
+        },
+        "boundary_gap": {
+          "n": 84,
+          "min": 0.000164031982421875,
+          "median": 0.420379638671875,
+          "p75": 0.9305357933044434,
+          "p90": 1.3095827102661133,
+          "p95": 2.809057331085203,
+          "max": 4.685626983642578
+        }
+      }
+    },
+    "traversing_pickup_dropoff": {
+      "vehicles": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 148,
+        "scene_fraction_with_cap_drop": 0.0,
+        "total_raw": 3253,
+        "total_in_frame": 1511,
+        "total_kept": 1511,
+        "total_cap_dropped": 0,
+        "total_spatial_crop_dropped": 1742,
+        "p_kept_given_inside": 1.0,
+        "overflow": {
+          "n": 150,
+          "min": -50.0,
+          "median": -41.0,
+          "p75": -36.0,
+          "p90": -32.0,
+          "p95": -30.450000000000017,
+          "max": -19.0
+        },
+        "positive_overflow": {
+          "n": 0
+        },
+        "d_K": {
+          "n": 148,
+          "min": 9.780537605285645,
+          "median": 35.821157455444336,
+          "p75": 39.18831920623779,
+          "p90": 40.93760948181152,
+          "p95": 42.1150821685791,
+          "max": 43.81058883666992
+        },
+        "d_first_drop": {
+          "n": 0
+        },
+        "boundary_gap": {
+          "n": 0
+        }
+      },
+      "pedestrians": {
+        "sample_count": 150,
+        "nonempty_scene_count": 148,
+        "in_frame_nonempty_scene_count": 135,
+        "scene_fraction_with_cap_drop": 0.3333333333333333,
+        "total_raw": 4949,
+        "total_in_frame": 3053,
+        "total_kept": 1806,
+        "total_cap_dropped": 1247,
+        "total_spatial_crop_dropped": 1896,
+        "p_kept_given_inside": 0.5915492957746479,
+        "overflow": {
+          "n": 150,
+          "min": -20.0,
+          "median": -7.0,
+          "p75": 9.0,
+          "p90": 32.19999999999999,
+          "p95": 38.54999999999998,
+          "max": 87.0
+        },
+        "positive_overflow": {
+          "n": 50,
+          "min": 1.0,
+          "median": 24.5,
+          "p75": 35.75,
+          "p90": 45.1,
+          "p95": 61.14999999999996,
+          "max": 87.0
+        },
+        "d_K": {
+          "n": 135,
+          "min": 7.594569206237793,
+          "median": 26.218942642211914,
+          "p75": 31.562329292297363,
+          "p90": 37.37511978149414,
+          "p95": 40.50081901550293,
+          "max": 43.963134765625
+        },
+        "d_first_drop": {
+          "n": 50,
+          "min": 10.66670036315918,
+          "median": 20.30613422393799,
+          "p75": 24.498497486114502,
+          "p90": 28.607272911071778,
+          "p95": 29.703182315826414,
+          "max": 31.03211784362793
+        },
+        "boundary_gap": {
+          "n": 50,
+          "min": 0.028146743774414062,
+          "median": 0.3217172622680664,
+          "p75": 0.8747076988220215,
+          "p90": 2.449919891357422,
+          "p95": 2.7913556098937984,
+          "max": 6.370782852172852
+        }
+      },
+      "static_objects": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 146,
+        "scene_fraction_with_cap_drop": 0.5866666666666667,
+        "total_raw": 10259,
+        "total_in_frame": 4928,
+        "total_kept": 3725,
+        "total_cap_dropped": 1203,
+        "total_spatial_crop_dropped": 5331,
+        "p_kept_given_inside": 0.7558847402597403,
+        "overflow": {
+          "n": 150,
+          "min": -30.0,
+          "median": 5.0,
+          "p75": 14.0,
+          "p90": 22.099999999999994,
+          "p95": 25.549999999999983,
+          "max": 32.0
+        },
+        "positive_overflow": {
+          "n": 88,
+          "min": 1.0,
+          "median": 13.0,
+          "p75": 20.25,
+          "p90": 25.0,
+          "p95": 28.64999999999999,
+          "max": 32.0
+        },
+        "d_K": {
+          "n": 146,
+          "min": 13.211833953857422,
+          "median": 29.273425102233887,
+          "p75": 35.04001712799072,
+          "p90": 38.81352996826172,
+          "p95": 40.91439628601074,
+          "max": 44.1439323425293
+        },
+        "d_first_drop": {
+          "n": 88,
+          "min": 15.23484992980957,
+          "median": 26.423301696777344,
+          "p75": 31.953238487243652,
+          "p90": 36.69434928894043,
+          "p95": 37.561718368530265,
+          "max": 43.394073486328125
+        },
+        "boundary_gap": {
+          "n": 88,
+          "min": 0.0059146881103515625,
+          "median": 0.3750791549682617,
+          "p75": 0.9715290069580078,
+          "p90": 1.9099439620971679,
+          "p95": 2.359310913085934,
+          "max": 4.249309539794922
+        }
+      }
+    },
+    "on_traffic_light_intersection": {
+      "vehicles": {
+        "sample_count": 150,
+        "nonempty_scene_count": 150,
+        "in_frame_nonempty_scene_count": 149,
+        "scene_fraction_with_cap_drop": 0.0,
+        "total_raw": 4354,
+        "total_in_frame": 1754,
+        "total_kept": 1754,
+        "total_cap_dropped": 0,
+        "total_spatial_crop_dropped": 2600,
+        "p_kept_given_inside": 1.0,
+        "overflow": {
+          "n": 150,
+          "min": -50.0,
+          "median": -40.0,
+          "p75": -34.25,
+          "p90": -29.900000000000006,
+          "p95": -24.0,
+          "max": -17.0
+        },
+        "positive_overflow": {
+          "n": 0
+        },
+        "d_K": {
+          "n": 149,
+          "min": 9.427936553955078,
+          "median": 33.90618896484375,
+          "p75": 37.37665939331055,
+          "p90": 40.24301223754884,
+          "p95": 42.01182403564453,
+          "max": 43.93165588378906
+        },
+        "d_first_drop": {
+          "n": 0
+        },
+        "boundary_gap": {
+          "n": 0
+        }
+      },
+      "pedestrians": {
+        "sample_count": 150,
+        "nonempty_scene_count": 139,
+        "in_frame_nonempty_scene_count": 124,
+        "scene_fraction_with_cap_drop": 0.30666666666666664,
+        "total_raw": 7674,
+        "total_in_frame": 2630,
+        "total_kept": 1473,
+        "total_cap_dropped": 1157,
+        "total_spatial_crop_dropped": 5044,
+        "p_kept_given_inside": 0.5600760456273765,
+        "overflow": {
+          "n": 150,
+          "min": -20.0,
+          "median": -11.5,
+          "p75": 9.0,
+          "p90": 28.19999999999999,
+          "p95": 41.0,
+          "max": 68.0
+        },
+        "positive_overflow": {
+          "n": 46,
+          "min": 1.0,
+          "median": 22.0,
+          "p75": 34.5,
+          "p90": 52.0,
+          "p95": 60.0,
+          "max": 68.0
+        },
+        "d_K": {
+          "n": 124,
+          "min": 8.511436462402344,
+          "median": 27.16940975189209,
+          "p75": 31.594409465789795,
+          "p90": 35.615102005004886,
+          "p95": 38.69950771331787,
+          "max": 44.28556442260742
+        },
+        "d_first_drop": {
+          "n": 46,
+          "min": 9.779669761657715,
+          "median": 22.017991065979004,
+          "p75": 26.31443166732788,
+          "p90": 31.724068641662598,
+          "p95": 34.145188331604004,
+          "max": 37.781517028808594
+        },
+        "boundary_gap": {
+          "n": 46,
+          "min": 0.007978439331054688,
+          "median": 0.22216415405273438,
+          "p75": 0.8106763362884521,
+          "p90": 1.3666191101074219,
+          "p95": 1.8318121433258057,
+          "max": 4.740232467651367
+        }
+      },
+      "static_objects": {
+        "sample_count": 150,
+        "nonempty_scene_count": 142,
+        "in_frame_nonempty_scene_count": 134,
+        "scene_fraction_with_cap_drop": 0.5066666666666667,
+        "total_raw": 11477,
+        "total_in_frame": 4291,
+        "total_kept": 2701,
+        "total_cap_dropped": 1590,
+        "total_spatial_crop_dropped": 7186,
+        "p_kept_given_inside": 0.6294570030295968,
+        "overflow": {
+          "n": 150,
+          "min": -30.0,
+          "median": 1.5,
+          "p75": 14.75,
+          "p90": 37.099999999999994,
+          "p95": 45.0,
+          "max": 74.0
+        },
+        "positive_overflow": {
+          "n": 76,
+          "min": 1.0,
+          "median": 14.5,
+          "p75": 30.5,
+          "p90": 45.0,
+          "p95": 54.5,
+          "max": 74.0
+        },
+        "d_K": {
+          "n": 134,
+          "min": 10.018614768981934,
+          "median": 24.664395332336426,
+          "p75": 29.976831436157227,
+          "p90": 34.87581672668457,
+          "p95": 37.273597145080565,
+          "max": 44.630638122558594
+        },
+        "d_first_drop": {
+          "n": 76,
+          "min": 14.620113372802734,
+          "median": 22.97248363494873,
+          "p75": 27.072795391082764,
+          "p90": 32.38790512084961,
+          "p95": 34.49235153198242,
+          "max": 43.10907745361328
+        },
+        "boundary_gap": {
+          "n": 76,
+          "min": 0.005970001220703125,
+          "median": 0.36937808990478516,
+          "p75": 0.6428031921386719,
+          "p90": 1.3219833374023438,
+          "p95": 1.7060132026672363,
+          "max": 11.269538879394531
+        }
+      }
+    },
+    "traversing_intersection": {
+      "vehicles": {
+        "sample_count": 150,
+        "nonempty_scene_count": 140,
+        "in_frame_nonempty_scene_count": 122,
+        "scene_fraction_with_cap_drop": 0.0,
+        "total_raw": 2523,
+        "total_in_frame": 979,
+        "total_kept": 979,
+        "total_cap_dropped": 0,
+        "total_spatial_crop_dropped": 1544,
+        "p_kept_given_inside": 1.0,
+        "overflow": {
+          "n": 150,
+          "min": -50.0,
+          "median": -45.0,
+          "p75": -41.0,
+          "p90": -35.900000000000006,
+          "p95": -30.450000000000017,
+          "max": -20.0
+        },
+        "positive_overflow": {
+          "n": 0
+        },
+        "d_K": {
+          "n": 122,
+          "min": 4.710779190063477,
+          "median": 32.546796798706055,
+          "p75": 37.27599334716797,
+          "p90": 41.657880020141604,
+          "p95": 42.97550392150879,
+          "max": 44.71080017089844
+        },
+        "d_first_drop": {
+          "n": 0
+        },
+        "boundary_gap": {
+          "n": 0
+        }
+      },
+      "pedestrians": {
+        "sample_count": 150,
+        "nonempty_scene_count": 131,
+        "in_frame_nonempty_scene_count": 101,
+        "scene_fraction_with_cap_drop": 0.26666666666666666,
+        "total_raw": 3999,
+        "total_in_frame": 1880,
+        "total_kept": 1193,
+        "total_cap_dropped": 687,
+        "total_spatial_crop_dropped": 2119,
+        "p_kept_given_inside": 0.6345744680851064,
+        "overflow": {
+          "n": 150,
+          "min": -20.0,
+          "median": -17.0,
+          "p75": 1.0,
+          "p90": 18.099999999999994,
+          "p95": 30.64999999999995,
+          "max": 68.0
+        },
+        "positive_overflow": {
+          "n": 40,
+          "min": 1.0,
+          "median": 13.0,
+          "p75": 25.25,
+          "p90": 41.50000000000001,
+          "p95": 47.05,
+          "max": 68.0
+        },
+        "d_K": {
+          "n": 101,
+          "min": 8.753572463989258,
+          "median": 27.197418212890625,
+          "p75": 30.92855453491211,
+          "p90": 33.50303649902344,
+          "p95": 35.0691032409668,
+          "max": 38.19951629638672
+        },
+        "d_first_drop": {
+          "n": 40,
+          "min": 12.956412315368652,
+          "median": 26.991759300231934,
+          "p75": 30.830013275146484,
+          "p90": 33.62263641357422,
+          "p95": 34.25104064941406,
+          "max": 38.10890197753906
+        },
+        "boundary_gap": {
+          "n": 40,
+          "min": 0.0033111572265625,
+          "median": 0.3329610824584961,
+          "p75": 0.8261260986328125,
+          "p90": 2.8502704620361334,
+          "p95": 3.640388202667236,
+          "max": 5.128011703491211
+        }
+      },
+      "static_objects": {
+        "sample_count": 150,
+        "nonempty_scene_count": 142,
+        "in_frame_nonempty_scene_count": 134,
+        "scene_fraction_with_cap_drop": 0.28,
+        "total_raw": 7547,
+        "total_in_frame": 2620,
+        "total_kept": 2230,
+        "total_cap_dropped": 390,
+        "total_spatial_crop_dropped": 4927,
+        "p_kept_given_inside": 0.851145038167939,
+        "overflow": {
+          "n": 150,
+          "min": -30.0,
+          "median": -15.0,
+          "p75": 2.0,
+          "p90": 7.099999999999994,
+          "p95": 20.0,
+          "max": 26.0
+        },
+        "positive_overflow": {
+          "n": 42,
+          "min": 1.0,
+          "median": 7.0,
+          "p75": 9.75,
+          "p90": 22.799999999999997,
+          "p95": 24.949999999999996,
+          "max": 26.0
+        },
+        "d_K": {
+          "n": 134,
+          "min": 8.869526863098145,
+          "median": 29.36747646331787,
+          "p75": 32.49029731750488,
+          "p90": 35.489348602294925,
+          "p95": 40.115414619445794,
+          "max": 44.921634674072266
+        },
+        "d_first_drop": {
+          "n": 42,
+          "min": 18.59596061706543,
+          "median": 28.729191780090332,
+          "p75": 32.104909896850586,
+          "p90": 33.95235900878906,
+          "p95": 35.46790065765381,
+          "max": 41.21210479736328
+        },
+        "boundary_gap": {
+          "n": 42,
+          "min": 0.0223236083984375,
+          "median": 0.6944446563720703,
+          "p75": 1.1063437461853027,
+          "p90": 1.473139762878418,
+          "p95": 1.849574279785155,
+          "max": 2.9286060333251953
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+/home/leitingting/anaconda3/envs/sledge/lib/python3.9/site-packages/torch/cuda/__init__.py:619: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+Metadata resolution 100/5649 logs
+Metadata resolution 200/5649 logs
+Metadata resolution 300/5649 logs
+Metadata resolution 400/5649 logs
+Metadata resolution 500/5649 logs
+Metadata resolution 600/5649 logs
+Metadata resolution 700/5649 logs
+Metadata resolution 800/5649 logs
+Metadata resolution 900/5649 logs
+Metadata resolution 1000/5649 logs
+Metadata resolution 1100/5649 logs
+Metadata resolution 1200/5649 logs
+Metadata resolution 1300/5649 logs
+Metadata resolution 1400/5649 logs
+Metadata resolution 1500/5649 logs
+Metadata resolution 1600/5649 logs
+Metadata resolution 1700/5649 logs
+Metadata resolution 1800/5649 logs
+Metadata resolution 1900/5649 logs
+Metadata resolution 2000/5649 logs
+Metadata resolution 2100/5649 logs
+Metadata resolution 2200/5649 logs
+Metadata resolution 2300/5649 logs
+Metadata resolution 2400/5649 logs
+Metadata resolution 2500/5649 logs
+Metadata resolution 2600/5649 logs
+Metadata resolution 2700/5649 logs
+Metadata resolution 2800/5649 logs
+Metadata resolution 2900/5649 logs
+Metadata resolution 3000/5649 logs
+Metadata resolution 3100/5649 logs
+Metadata resolution 3200/5649 logs
+Metadata resolution 3300/5649 logs
+Metadata resolution 3400/5649 logs
+Metadata resolution 3500/5649 logs
+Metadata resolution 3600/5649 logs
+Metadata resolution 3700/5649 logs
+Metadata resolution 3800/5649 logs
+Metadata resolution 3900/5649 logs
+Metadata resolution 4000/5649 logs
+Metadata resolution 4100/5649 logs
+Metadata resolution 4200/5649 logs
+Metadata resolution 4300/5649 logs
+Metadata resolution 4400/5649 logs
+Metadata resolution 4500/5649 logs
+Metadata resolution 4600/5649 logs
+Metadata resolution 4700/5649 logs
+Metadata resolution 4800/5649 logs
+Metadata resolution 4900/5649 logs
+Metadata resolution 5000/5649 logs
+Metadata resolution 5100/5649 logs
+Metadata resolution 5200/5649 logs
+Metadata resolution 5300/5649 logs
+Metadata resolution 5400/5649 logs
+Metadata resolution 5500/5649 logs
+Metadata resolution 5600/5649 logs
+Targeted retention 100/900
+Targeted retention 200/900
+Targeted retention 300/900
+Targeted retention 400/900
+Targeted retention 500/900
+Targeted retention 600/900
+Targeted retention 700/900
+Targeted retention 800/900
+Targeted retention 900/900
+{'status': 'COMPLETE', 'sample_count': 900, 'unknown_reasons': {'database_unavailable': 97293, 'unlabeled_in_authoritative_db': 40684}, 'unknown_remaining': 137977, 'metadata_issues': 0}

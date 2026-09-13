@@ -1,0 +1,16 @@
+usage: targeted_retention.py [-h] [--cache-root CACHE_ROOT]
+                             [--output-dir OUTPUT_DIR]
+                             [--sample-size SAMPLE_SIZE] [--seed SEED]
+                             --db-root DB_ROOT
+                             [--equivalence-summary EQUIVALENCE_SUMMARY]
+
+Phase 0B-4: target-type retention and explicit unknown-type accounting.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --cache-root CACHE_ROOT
+  --output-dir OUTPUT_DIR
+  --sample-size SAMPLE_SIZE
+  --seed SEED
+  --db-root DB_ROOT
+  --equivalence-summary EQUIVALENCE_SUMMARY
