@@ -1,0 +1,820 @@
+{
+  "seed": 9102026,
+  "selected": [
+    {
+      "log_name": "2021.09.13.18.39.41_veh-39_00273_00761",
+      "scenario_type": "traversing_intersection",
+      "token": "a8ba823407a357b2",
+      "path": "2021.09.13.18.39.41_veh-39_00273_00761/traversing_intersection/a8ba823407a357b2/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "traversing_intersection"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 6,
+          "in_frame_count": 2,
+          "kept_count": 2,
+          "dropped_outside_frame": 4,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -48,
+          "d_K": 28.347898483276367,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 5,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 5,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -20,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 13,
+          "in_frame_count": 12,
+          "kept_count": 12,
+          "dropped_outside_frame": 1,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -18,
+          "d_K": 31.87856674194336,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "traversing_intersection",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.09.03.18.32.35_veh-39_00559_01142",
+      "scenario_type": "traversing_crosswalk",
+      "token": "fe7e24ace398541f",
+      "path": "2021.09.03.18.32.35_veh-39_00559_01142/traversing_crosswalk/fe7e24ace398541f/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "traversing_crosswalk"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 9,
+          "in_frame_count": 3,
+          "kept_count": 3,
+          "dropped_outside_frame": 6,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -47,
+          "d_K": 30.287025451660156,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 34,
+          "in_frame_count": 10,
+          "kept_count": 10,
+          "dropped_outside_frame": 24,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -10,
+          "d_K": 28.360307693481445,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 8,
+          "in_frame_count": 6,
+          "kept_count": 6,
+          "dropped_outside_frame": 2,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -24,
+          "d_K": 29.651012420654297,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "traversing_crosswalk",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.09.01.16.59.08_veh-39_01172_01721",
+      "scenario_type": "traversing_intersection",
+      "token": "d9a22045f0bf52e1",
+      "path": "2021.09.01.16.59.08_veh-39_01172_01721/traversing_intersection/d9a22045f0bf52e1/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "traversing_intersection"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 1,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 1,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -50,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 0,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -20,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 4,
+          "in_frame_count": 4,
+          "kept_count": 4,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -26,
+          "d_K": 28.723466873168945,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "traversing_intersection",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.08.24.14.40.55_veh-28_01570_01776",
+      "scenario_type": "near_pedestrian_on_crosswalk",
+      "token": "b21da07870d2560b",
+      "path": "2021.08.24.14.40.55_veh-28_01570_01776/near_pedestrian_on_crosswalk/b21da07870d2560b/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "near_pedestrian_on_crosswalk"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 3,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 3,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -50,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 5,
+          "in_frame_count": 5,
+          "kept_count": 5,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -15,
+          "d_K": 20.816192626953125,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 2,
+          "in_frame_count": 2,
+          "kept_count": 2,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -28,
+          "d_K": 30.39244842529297,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "near_pedestrian_on_crosswalk",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.10.21.17.08.25_veh-28_00521_00992",
+      "scenario_type": "traversing_intersection",
+      "token": "a2257d7ec44a5fe4",
+      "path": "2021.10.21.17.08.25_veh-28_00521_00992/traversing_intersection/a2257d7ec44a5fe4/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "traversing_intersection"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 5,
+          "in_frame_count": 3,
+          "kept_count": 3,
+          "dropped_outside_frame": 2,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -47,
+          "d_K": 31.24704360961914,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 1,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 1,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -20,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 3,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 3,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -30,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "traversing_intersection",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.10.13.14.40.14_veh-28_00131_00430",
+      "scenario_type": "high_lateral_acceleration",
+      "token": "86d2e80d5aee5d2d",
+      "path": "2021.10.13.14.40.14_veh-28_00131_00430/high_lateral_acceleration/86d2e80d5aee5d2d/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 3,
+          "in_frame_count": 0,
+          "kept_count": 0,
+          "dropped_outside_frame": 3,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -50,
+          "d_K": null,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 1,
+          "in_frame_count": 1,
+          "kept_count": 1,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -19,
+          "d_K": 31.546323776245117,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 3,
+          "in_frame_count": 3,
+          "kept_count": 3,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -27,
+          "d_K": 20.679641723632812,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "normal_no_overflow",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.07.24.00.36.59_veh-47_05600_06769",
+      "scenario_type": "on_pickup_dropoff",
+      "token": "7ac08b7c991e5b91",
+      "path": "2021.07.24.00.36.59_veh-47_05600_06769/on_pickup_dropoff/7ac08b7c991e5b91/sledge_raw.gz",
+      "selection_reasons": [
+        "pedestrians_overflow",
+        "static_objects_overflow",
+        "on_pickup_dropoff"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 49,
+          "in_frame_count": 26,
+          "kept_count": 26,
+          "dropped_outside_frame": 23,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -24,
+          "d_K": 43.024192810058594,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 149,
+          "in_frame_count": 77,
+          "kept_count": 20,
+          "dropped_outside_frame": 72,
+          "dropped_by_cap": 57,
+          "cap": 20,
+          "overflow": 57,
+          "d_K": 15.293213844299316,
+          "d_first_drop": 15.565997123718262,
+          "boundary_gap": 0.2727832794189453
+        },
+        "static_objects": {
+          "raw_count": 127,
+          "in_frame_count": 52,
+          "kept_count": 30,
+          "dropped_outside_frame": 75,
+          "dropped_by_cap": 22,
+          "cap": 30,
+          "overflow": 22,
+          "d_K": 19.705488204956055,
+          "d_first_drop": 19.975421905517578,
+          "boundary_gap": 0.26993370056152344
+        }
+      },
+      "primary_selection_reason": "static_objects_overflow",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.10.12.19.20.46_veh-28_00644_00868",
+      "scenario_type": "medium_magnitude_speed",
+      "token": "133ba37489cb5a19",
+      "path": "2021.10.12.19.20.46_veh-28_00644_00868/medium_magnitude_speed/133ba37489cb5a19/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 11,
+          "in_frame_count": 4,
+          "kept_count": 4,
+          "dropped_outside_frame": 7,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -46,
+          "d_K": 26.673189163208008,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 18,
+          "in_frame_count": 14,
+          "kept_count": 14,
+          "dropped_outside_frame": 4,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -6,
+          "d_K": 30.89772605895996,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 3,
+          "in_frame_count": 2,
+          "kept_count": 2,
+          "dropped_outside_frame": 1,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -28,
+          "d_K": 21.27974510192871,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "normal_no_overflow",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.06.08.17.36.50_veh-26_00639_01479",
+      "scenario_type": "traversing_pickup_dropoff",
+      "token": "1dfd6bf435ba5300",
+      "path": "2021.06.08.17.36.50_veh-26_00639_01479/traversing_pickup_dropoff/1dfd6bf435ba5300/sledge_raw.gz",
+      "selection_reasons": [
+        "static_objects_overflow",
+        "traversing_pickup_dropoff"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 22,
+          "in_frame_count": 13,
+          "kept_count": 13,
+          "dropped_outside_frame": 9,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -37,
+          "d_K": 42.95503616333008,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 25,
+          "in_frame_count": 19,
+          "kept_count": 19,
+          "dropped_outside_frame": 6,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -1,
+          "d_K": 26.8543643951416,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 100,
+          "in_frame_count": 37,
+          "kept_count": 30,
+          "dropped_outside_frame": 63,
+          "dropped_by_cap": 7,
+          "cap": 30,
+          "overflow": 7,
+          "d_K": 30.42535400390625,
+          "d_first_drop": 32.384002685546875,
+          "boundary_gap": 1.958648681640625
+        }
+      },
+      "primary_selection_reason": "traversing_pickup_dropoff",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.06.08.12.54.54_veh-26_04262_04732",
+      "scenario_type": "near_pedestrian_on_crosswalk",
+      "token": "a6b771dda7545822",
+      "path": "2021.06.08.12.54.54_veh-26_04262_04732/near_pedestrian_on_crosswalk/a6b771dda7545822/sledge_raw.gz",
+      "selection_reasons": [
+        "pedestrians_overflow",
+        "static_objects_overflow",
+        "near_pedestrian_on_crosswalk"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 4,
+          "in_frame_count": 1,
+          "kept_count": 1,
+          "dropped_outside_frame": 3,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -49,
+          "d_K": 18.73212432861328,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 41,
+          "in_frame_count": 29,
+          "kept_count": 20,
+          "dropped_outside_frame": 12,
+          "dropped_by_cap": 9,
+          "cap": 20,
+          "overflow": 9,
+          "d_K": 24.76700210571289,
+          "d_first_drop": 25.117420196533203,
+          "boundary_gap": 0.3504180908203125
+        },
+        "static_objects": {
+          "raw_count": 128,
+          "in_frame_count": 63,
+          "kept_count": 30,
+          "dropped_outside_frame": 65,
+          "dropped_by_cap": 33,
+          "cap": 30,
+          "overflow": 33,
+          "d_K": 26.485857009887695,
+          "d_first_drop": 29.051048278808594,
+          "boundary_gap": 2.5651912689208984
+        }
+      },
+      "primary_selection_reason": "near_pedestrian_on_crosswalk",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.10.05.06.24.06_veh-50_00717_01300",
+      "scenario_type": "traversing_intersection",
+      "token": "c8a9b3db1170577d",
+      "path": "2021.10.05.06.24.06_veh-50_00717_01300/traversing_intersection/c8a9b3db1170577d/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "traversing_intersection"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 9,
+          "in_frame_count": 5,
+          "kept_count": 5,
+          "dropped_outside_frame": 4,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -45,
+          "d_K": 25.305978775024414,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 1,
+          "in_frame_count": 1,
+          "kept_count": 1,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -19,
+          "d_K": 23.483356475830078,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 3,
+          "in_frame_count": 3,
+          "kept_count": 3,
+          "dropped_outside_frame": 0,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -27,
+          "d_K": 36.83243179321289,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "traversing_intersection",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.10.14.17.47.55_veh-28_00484_01094",
+      "scenario_type": "traversing_crosswalk",
+      "token": "19d093209a00506d",
+      "path": "2021.10.14.17.47.55_veh-28_00484_01094/traversing_crosswalk/19d093209a00506d/sledge_raw.gz",
+      "selection_reasons": [
+        "normal_no_overflow",
+        "traversing_crosswalk"
+      ],
+      "candidate_metrics": {
+        "vehicles": {
+          "raw_count": 22,
+          "in_frame_count": 6,
+          "kept_count": 6,
+          "dropped_outside_frame": 16,
+          "dropped_by_cap": 0,
+          "cap": 50,
+          "overflow": -44,
+          "d_K": 31.897493362426758,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "pedestrians": {
+          "raw_count": 21,
+          "in_frame_count": 12,
+          "kept_count": 12,
+          "dropped_outside_frame": 9,
+          "dropped_by_cap": 0,
+          "cap": 20,
+          "overflow": -8,
+          "d_K": 36.18851089477539,
+          "d_first_drop": null,
+          "boundary_gap": null
+        },
+        "static_objects": {
+          "raw_count": 4,
+          "in_frame_count": 2,
+          "kept_count": 2,
+          "dropped_outside_frame": 2,
+          "dropped_by_cap": 0,
+          "cap": 30,
+          "overflow": -28,
+          "d_K": 34.66170883178711,
+          "d_first_drop": null,
+          "boundary_gap": null
+        }
+      },
+      "primary_selection_reason": "traversing_crosswalk",
+      "selection_source": "0B-3"
+    },
+    {
+      "log_name": "2021.09.13.17.32.06_veh-39_01315_01527",
+      "scenario_type": "near_pedestrian_on_crosswalk",
+      "token": "e0b6fd9583355c6d",
+      "path": "2021.09.13.17.32.06_veh-39_01315_01527/near_pedestrian_on_crosswalk/e0b6fd9583355c6d/sledge_raw.gz",
+      "original_scenario_type": "near_pedestrian_on_crosswalk",
+      "resolved_scenario_type": "near_pedestrian_on_crosswalk",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.10.01.19.16.42_veh-28_00392_00906",
+      "scenario_type": "near_pedestrian_on_crosswalk",
+      "token": "8f6a1bee1ba054af",
+      "path": "2021.10.01.19.16.42_veh-28_00392_00906/near_pedestrian_on_crosswalk/8f6a1bee1ba054af/sledge_raw.gz",
+      "original_scenario_type": "near_pedestrian_on_crosswalk",
+      "resolved_scenario_type": "near_pedestrian_on_crosswalk",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.08.24.13.20.17_veh-08_00016_00738",
+      "scenario_type": "near_pedestrian_on_crosswalk",
+      "token": "b19bf286110d578b",
+      "path": "2021.08.24.13.20.17_veh-08_00016_00738/near_pedestrian_on_crosswalk/b19bf286110d578b/sledge_raw.gz",
+      "original_scenario_type": "near_pedestrian_on_crosswalk",
+      "resolved_scenario_type": "near_pedestrian_on_crosswalk",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.09.01.13.51.23_veh-40_00962_01574",
+      "scenario_type": "traversing_crosswalk",
+      "token": "229f7c1c62fa5439",
+      "path": "2021.09.01.13.51.23_veh-40_00962_01574/traversing_crosswalk/229f7c1c62fa5439/sledge_raw.gz",
+      "original_scenario_type": "traversing_crosswalk",
+      "resolved_scenario_type": "traversing_crosswalk",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.09.07.15.28.24_veh-40_00160_00361",
+      "scenario_type": "traversing_crosswalk",
+      "token": "b1557245d0845fc0",
+      "path": "2021.09.07.15.28.24_veh-40_00160_00361/traversing_crosswalk/b1557245d0845fc0/sledge_raw.gz",
+      "original_scenario_type": "traversing_crosswalk",
+      "resolved_scenario_type": "traversing_crosswalk",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.09.13.14.16.34_veh-28_00363_00529",
+      "scenario_type": "traversing_crosswalk",
+      "token": "6798fafcd78858cb",
+      "path": "2021.09.13.14.16.34_veh-28_00363_00529/traversing_crosswalk/6798fafcd78858cb/sledge_raw.gz",
+      "original_scenario_type": "traversing_crosswalk",
+      "resolved_scenario_type": "traversing_crosswalk",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.07.24.23.59.52_veh-12_04767_05924",
+      "scenario_type": "on_pickup_dropoff",
+      "token": "007ec6e152325bf4",
+      "path": "2021.07.24.23.59.52_veh-12_04767_05924/on_pickup_dropoff/007ec6e152325bf4/sledge_raw.gz",
+      "original_scenario_type": "on_pickup_dropoff",
+      "resolved_scenario_type": "on_pickup_dropoff",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.07.24.23.59.52_veh-12_01025_01526",
+      "scenario_type": "on_pickup_dropoff",
+      "token": "79fe250ef7905803",
+      "path": "2021.07.24.23.59.52_veh-12_01025_01526/on_pickup_dropoff/79fe250ef7905803/sledge_raw.gz",
+      "original_scenario_type": "on_pickup_dropoff",
+      "resolved_scenario_type": "on_pickup_dropoff",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.06.08.16.31.33_veh-38_01589_02072",
+      "scenario_type": "on_pickup_dropoff",
+      "token": "52b9316d85095da7",
+      "path": "2021.06.08.16.31.33_veh-38_01589_02072/on_pickup_dropoff/52b9316d85095da7/sledge_raw.gz",
+      "original_scenario_type": "on_pickup_dropoff",
+      "resolved_scenario_type": "on_pickup_dropoff",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.06.08.14.36.49_veh-38_01567_02014",
+      "scenario_type": "traversing_pickup_dropoff",
+      "token": "8a12232c4bb4511e",
+      "path": "2021.06.08.14.36.49_veh-38_01567_02014/traversing_pickup_dropoff/8a12232c4bb4511e/sledge_raw.gz",
+      "original_scenario_type": "traversing_pickup_dropoff",
+      "resolved_scenario_type": "traversing_pickup_dropoff",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.06.07.13.42.27_veh-47_00299_00588",
+      "scenario_type": "traversing_pickup_dropoff",
+      "token": "acf27d96887b53c2",
+      "path": "2021.06.07.13.42.27_veh-47_00299_00588/traversing_pickup_dropoff/acf27d96887b53c2/sledge_raw.gz",
+      "original_scenario_type": "traversing_pickup_dropoff",
+      "resolved_scenario_type": "traversing_pickup_dropoff",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.06.07.11.59.52_veh-35_00765_01072",
+      "scenario_type": "traversing_pickup_dropoff",
+      "token": "12ce910d76e65082",
+      "path": "2021.06.07.11.59.52_veh-35_00765_01072/traversing_pickup_dropoff/12ce910d76e65082/sledge_raw.gz",
+      "original_scenario_type": "traversing_pickup_dropoff",
+      "resolved_scenario_type": "traversing_pickup_dropoff",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.06.08.12.54.54_veh-26_02994_03970",
+      "scenario_type": "on_traffic_light_intersection",
+      "token": "f94b8f85441350ae",
+      "path": "2021.06.08.12.54.54_veh-26_02994_03970/on_traffic_light_intersection/f94b8f85441350ae/sledge_raw.gz",
+      "original_scenario_type": "on_traffic_light_intersection",
+      "resolved_scenario_type": "on_traffic_light_intersection",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.08.24.18.56.54_veh-45_00801_01587",
+      "scenario_type": "on_traffic_light_intersection",
+      "token": "196e1a478cc956a9",
+      "path": "2021.08.24.18.56.54_veh-45_00801_01587/on_traffic_light_intersection/196e1a478cc956a9/sledge_raw.gz",
+      "original_scenario_type": "on_traffic_light_intersection",
+      "resolved_scenario_type": "on_traffic_light_intersection",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.07.24.19.10.14_veh-37_02937_03698",
+      "scenario_type": "on_traffic_light_intersection",
+      "token": "abce4c58896057ca",
+      "path": "2021.07.24.19.10.14_veh-37_02937_03698/on_traffic_light_intersection/abce4c58896057ca/sledge_raw.gz",
+      "original_scenario_type": "on_traffic_light_intersection",
+      "resolved_scenario_type": "on_traffic_light_intersection",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.07.24.15.54.20_veh-47_03573_05252",
+      "scenario_type": "traversing_intersection",
+      "token": "2a36b4bcb7c45686",
+      "path": "2021.07.24.15.54.20_veh-47_03573_05252/traversing_intersection/2a36b4bcb7c45686/sledge_raw.gz",
+      "original_scenario_type": "traversing_intersection",
+      "resolved_scenario_type": "traversing_intersection",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.10.13.14.40.14_veh-28_01119_01246",
+      "scenario_type": "traversing_intersection",
+      "token": "7ccc707ccf4f5dab",
+      "path": "2021.10.13.14.40.14_veh-28_01119_01246/traversing_intersection/7ccc707ccf4f5dab/sledge_raw.gz",
+      "original_scenario_type": "traversing_intersection",
+      "resolved_scenario_type": "traversing_intersection",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    },
+    {
+      "log_name": "2021.07.24.16.07.03_veh-35_03033_05899",
+      "scenario_type": "traversing_intersection",
+      "token": "ebbad237c3c05ded",
+      "path": "2021.07.24.16.07.03_veh-35_03033_05899/traversing_intersection/ebbad237c3c05ded/sledge_raw.gz",
+      "original_scenario_type": "traversing_intersection",
+      "resolved_scenario_type": "traversing_intersection",
+      "type_source": "native_cache_directory",
+      "database_available": true,
+      "selection_source": "0B-4"
+    }
+  ],
+  "candidate_count": 937,
+  "with_local_db": 136,
+  "unavailable_local_db": 801,
+  "by_type": {
+    "traversing_intersection": 7,
+    "traversing_crosswalk": 5,
+    "near_pedestrian_on_crosswalk": 5,
+    "high_lateral_acceleration": 1,
+    "on_pickup_dropoff": 4,
+    "medium_magnitude_speed": 1,
+    "traversing_pickup_dropoff": 4,
+    "on_traffic_light_intersection": 3
+  },
+  "by_source": {
+    "0B-3": 12,
+    "0B-4": 18
+  }
+}

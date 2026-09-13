@@ -1,0 +1,10 @@
+usage: temporal_diagnostics.py [-h] [--input-dir INPUT_DIR]
+                               [--output-dir OUTPUT_DIR]
+
+Summarize saved temporal evidence, separating measured agent and dummy static
+velocity.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --input-dir INPUT_DIR
+  --output-dir OUTPUT_DIR

@@ -1,0 +1,125 @@
+[
+  {
+    "example": {
+      "scenario_token": "c8a9b3db1170577d",
+      "log_name": "2021.10.05.06.24.06_veh-50_00717_01300",
+      "track_token": "d5e1f4d2e3b7515a",
+      "previous_detection_token": "ae2f0a5ab9fd5859",
+      "detection_token": "5b65825fffb3550f",
+      "timestamp_us": 1633415988200137,
+      "actor_type": "VEHICLE",
+      "global_velocity_residual_mps": 53.18953175278794,
+      "body_velocity_hypothesis_residual_mps": 53.18953175278794,
+      "displacement_mps": [
+        32.973716581402485,
+        -41.73559994645075
+      ],
+      "recorded_velocity_mps": [
+        0.0,
+        0.0
+      ],
+      "dt_s": 0.050015
+    },
+    "database_rows": [
+      {
+        "track_token": "d5e1f4d2e3b7515a",
+        "x": 365928.3365480425,
+        "y": 142923.35191281515,
+        "vx": 0.0,
+        "vy": 0.0,
+        "timestamp_us": 1633415988150122
+      },
+      {
+        "track_token": "d5e1f4d2e3b7515a",
+        "x": 365929.9857284773,
+        "y": 142921.26450678383,
+        "vx": 0.0,
+        "vy": 0.0,
+        "timestamp_us": 1633415988200137
+      }
+    ],
+    "reproduced_from_readonly_db": true
+  },
+  {
+    "example": {
+      "scenario_token": "c8a9b3db1170577d",
+      "log_name": "2021.10.05.06.24.06_veh-50_00717_01300",
+      "track_token": "d5e1f4d2e3b7515a",
+      "previous_detection_token": "5b65825fffb3550f",
+      "detection_token": "b600810e3a805bdf",
+      "timestamp_us": 1633415988250149,
+      "actor_type": "VEHICLE",
+      "global_velocity_residual_mps": 49.987152457042335,
+      "body_velocity_hypothesis_residual_mps": 49.987152457042335,
+      "displacement_mps": [
+        -38.06100426254456,
+        32.404866382846855
+      ],
+      "recorded_velocity_mps": [
+        0.0,
+        0.0
+      ],
+      "dt_s": 0.050012
+    },
+    "database_rows": [
+      {
+        "track_token": "d5e1f4d2e3b7515a",
+        "x": 365929.9857284773,
+        "y": 142921.26450678383,
+        "vx": 0.0,
+        "vy": 0.0,
+        "timestamp_us": 1633415988200137
+      },
+      {
+        "track_token": "d5e1f4d2e3b7515a",
+        "x": 365928.0822215321,
+        "y": 142922.88513896137,
+        "vx": 0.0,
+        "vy": 0.0,
+        "timestamp_us": 1633415988250149
+      }
+    ],
+    "reproduced_from_readonly_db": true
+  },
+  {
+    "example": {
+      "scenario_token": "abce4c58896057ca",
+      "log_name": "2021.07.24.19.10.14_veh-37_02937_03698",
+      "track_token": "567290d76ea858f5",
+      "previous_detection_token": "2a396e1e6bf6540c",
+      "detection_token": "c58a13fd8bff59cc",
+      "timestamp_us": 1627157352999928,
+      "actor_type": "VEHICLE",
+      "global_velocity_residual_mps": 37.08580373552467,
+      "body_velocity_hypothesis_residual_mps": 37.86328690092815,
+      "displacement_mps": [
+        19.00996476300672,
+        33.278964495057906
+      ],
+      "recorded_velocity_mps": [
+        0.5428084741114492,
+        1.1181035409203162
+      ],
+      "dt_s": 0.050007
+    },
+    "database_rows": [
+      {
+        "track_token": "567290d76ea858f5",
+        "x": 664599.023884094,
+        "y": 3999108.973808443,
+        "vx": 0.5428084741114492,
+        "vy": 1.1181035409203162,
+        "timestamp_us": 1627157352949921
+      },
+      {
+        "track_token": "567290d76ea858f5",
+        "x": 664599.9745154019,
+        "y": 3999110.6379896207,
+        "vx": 1.7663263512074767,
+        "vy": 3.339362827964055,
+        "timestamp_us": 1627157352999928
+      }
+    ],
+    "reproduced_from_readonly_db": true
+  }
+]

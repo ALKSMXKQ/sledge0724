@@ -1,0 +1,33 @@
+/home/leitingting/anaconda3/envs/sledge/lib/python3.9/site-packages/torch/cuda/__init__.py:619: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+Temporal scene 1/30; completed=1; issues=0
+Temporal scene 2/30; completed=2; issues=0
+Temporal scene 3/30; completed=3; issues=0
+Temporal scene 4/30; completed=4; issues=0
+Temporal scene 5/30; completed=5; issues=0
+Temporal scene 6/30; completed=6; issues=0
+Temporal scene 7/30; completed=7; issues=0
+Temporal scene 8/30; completed=8; issues=0
+Temporal scene 9/30; completed=9; issues=0
+Temporal scene 10/30; completed=10; issues=0
+Temporal scene 11/30; completed=11; issues=0
+Temporal scene 12/30; completed=12; issues=0
+Temporal scene 13/30; completed=13; issues=0
+Temporal scene 14/30; completed=14; issues=0
+Temporal scene 15/30; completed=15; issues=0
+Temporal scene 16/30; completed=16; issues=0
+Temporal scene 17/30; completed=17; issues=0
+Temporal scene 18/30; completed=18; issues=0
+Temporal scene 19/30; completed=19; issues=0
+Temporal scene 20/30; completed=20; issues=0
+Temporal scene 21/30; completed=21; issues=0
+Temporal scene 22/30; completed=22; issues=0
+Temporal scene 23/30; completed=23; issues=0
+Temporal scene 24/30; completed=24; issues=0
+Temporal scene 25/30; completed=25; issues=0
+Temporal scene 26/30; completed=26; issues=0
+Temporal scene 27/30; completed=27; issues=0
+Temporal scene 28/30; completed=28; issues=0
+Temporal scene 29/30; completed=29; issues=0
+Temporal scene 30/30; completed=30; issues=0
+{'status': 'PASS', 'sample_count_selected': 30, 'sample_count_completed': 30, 'frame_count': 3017, 'track_count': 4089, 'total_actor_observations': 285188, 'tracks_observed_in_multiple_frames': 4069, 'tracks_with_observation_gaps': 0, 'unique_runtime_track_id_failures': 0, 'detection_token_changes': 281099, 'max_consecutive_frames': {'n': 4089, 'min': 1.0, 'median': 95.0, 'p75': 101.0, 'p90': 101.0, 'p95': 101.0, 'max': 101.0}, 'database_link_checks': 567822, 'identity_failures': 0, 'dt_s': {'n': 2987, 'mean': 0.04999021727485771, 'std': 3.889251060970125e-05, 'min': 0.049803, 'max': 0.050058}, 'max_coordinate_transform_error': 3.8146784646642118e-06, 'transition_counts': {'spatial_entry': 461, 'spatial_exit': 394, 'observation_disappearance_unknown_cause': 1156, 'observation_appearance_censored': 1347, 'capacity_exclusion': 249, 'capacity_readmission': 241, 'other_representation_transition': 16}, 'selection': {'candidate_count': 937, 'with_local_db': 136, 'unavailable_local_db': 801, 'by_type': {'traversing_intersection': 7, 'traversing_crosswalk': 5, 'near_pedestrian_on_crosswalk': 5, 'high_lateral_acceleration': 1, 'on_pickup_dropoff': 4, 'medium_magnitude_speed': 1, 'traversing_pickup_dropoff': 4, 'on_traffic_light_intersection': 3}, 'by_source': {'0B-3': 12, '0B-4': 18}}}

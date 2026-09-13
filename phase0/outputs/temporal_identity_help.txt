@@ -1,0 +1,25 @@
+usage: temporal_identity.py [-h] [--cache-root CACHE_ROOT]
+                            [--output-dir OUTPUT_DIR]
+                            [--sample-size SAMPLE_SIZE] [--seed SEED]
+                            --db-root DB_ROOT [--map-root MAP_ROOT]
+                            [--map-version MAP_VERSION] [--duration DURATION]
+                            [--equivalence-dir EQUIVALENCE_DIR]
+                            [--targeted-dir TARGETED_DIR]
+
+Phase 0C: real nuPlan identity, clock, coordinate, and representation
+transitions.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --cache-root CACHE_ROOT
+  --output-dir OUTPUT_DIR
+  --sample-size SAMPLE_SIZE
+  --seed SEED
+  --db-root DB_ROOT
+  --map-root MAP_ROOT
+  --map-version MAP_VERSION
+                        Installed nuPlan scenario-builder YAML default
+  --duration DURATION   Contiguous future rollout duration in seconds at
+                        native DB rate
+  --equivalence-dir EQUIVALENCE_DIR
+  --targeted-dir TARGETED_DIR
