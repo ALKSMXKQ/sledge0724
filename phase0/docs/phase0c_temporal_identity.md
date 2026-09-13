@@ -12,7 +12,7 @@ Persistent identity is checked using repeated track tokens, per-frame duplicate 
 
 ## Coordinate and unit contract
 
-- Object x/y and ego pose x/y are map/global coordinates in meters. Heading is radians. Boxes store full width/length in meters; velocity is m/s. Static objects have no measured velocity field in the native API.
+- Object x/y and ego pose x/y are map/global coordinates in meters. Heading is radians. Boxes store full width/length in meters; velocity is m/s. The installed StaticObject API exposes a dummy zero velocity, not a measured velocity; static SLEDGE state has no velocity dimension.
 - SLEDGE agent-local origin is **ego center**, while nuPlan DB ego position and the returned `rear_axle` refer to the rear axle. Both are saved, preventing origin confusion.
 - Independent transformation uses `dx=x_actor-x_ego_center`, `dy=y_actor-y_ego_center`, `x_local=cos(h)*dx+sin(h)*dy`, `y_local=-sin(h)*dx+cos(h)*dy`. Heading uses `atan2(sin(h_actor-h_ego), cos(h_actor-h_ego))`, because the native **raw feature builder** explicitly performs that normalization. 0B-3 still compares processed heading without adding wrapping.
 - Native raw actor features cast to float32; the independent transform remains float64 for reporting. Speed is `hypot(vx,vy)`, then the validated processor applies its category limit. Width/length and speed are included in the state correspondence tests.
@@ -87,3 +87,5 @@ Underlying ego_pose-minus-lidar timestamps range from **−5,444 to +5,315 µs**
 ## Gate
 
 Phase 0C: **PASS** for the tested structural identity/time/coordinate/transition contract. Structural anomalies: none. Trajectory velocity/position inconsistencies are separately recorded data-quality observations, not hidden under an all-data-perfect claim. Combined with B3 PASS and B4 COMPLETE, the requested Phase 0 audit Gate can close. This does not close the open questions about annotation fidelity or future hazard-event definitions.
+
+The three largest saved velocity-residual pairs were independently re-queried from the original read-only SQLite DB. All positions, velocities, timestamps and track tokens reproduce the saved diagnostic exactly; see `velocity_outlier_db_checks.json`. This rules out this audit’s transformation as their source without diagnosing the underlying annotation issue.

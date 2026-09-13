@@ -79,3 +79,20 @@ See `docs/source_audit.md`. Key findings include:
 ## Gate 0 is not closed yet
 
 We still need runtime evidence from representative real B0 scenes and at least one simulation rollout. Do not start Phase 1 until these checks are complete.
+
+## Native validation, targeted retention, and temporal audit
+
+The completed review package is [docs/phase0_review_package.md](docs/phase0_review_package.md).
+Full commands and environment are in [docs/phase0_execution_commands.md](docs/phase0_execution_commands.md).
+The audit requires the installed SLEDGE/nuPlan Python environment and the real cache, source log databases, and maps.
+
+To repeat the three stages in fresh output directories, from the repository root:
+
+```bash
+export PYTHONPATH="phase0/src:.:${PYTHONPATH:-}"
+python -m phase0_audit.processor_equivalence --cache-root CACHE_ROOT --output-dir phase0/outputs/repeat/b3 --sample-size 100 --seed 9102026
+python -m phase0_audit.targeted_retention --cache-root CACHE_ROOT --db-root DB_ROOT --equivalence-summary phase0/outputs/repeat/b3/summary.json --output-dir phase0/outputs/repeat/b4 --sample-size 150 --seed 9102026
+python -m phase0_audit.temporal_identity --cache-root CACHE_ROOT --db-root DB_ROOT --map-root MAP_ROOT --equivalence-dir phase0/outputs/repeat/b3 --targeted-dir phase0/outputs/repeat/b4 --output-dir phase0/outputs/repeat/c --sample-size 30 --seed 9102026 --duration 5
+```
+
+Run the commands strictly in sequence and stop if a command fails. Each module supports `--help` and refuses to overwrite a nonempty output directory. B3 must PASS before B4; C also requires B4 COMPLETE. B4's `--sample-size` is **per target type**, whereas B3/C use total scenario count. No hazard semantics or model changes are introduced by these diagnostics.

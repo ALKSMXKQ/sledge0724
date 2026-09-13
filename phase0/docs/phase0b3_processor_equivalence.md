@@ -43,3 +43,5 @@ This validates the observed processor/config/software version and selected real 
 Selected overlapping coverage: `{'normal_no_overflow': 49, 'traversing_pickup_dropoff': 14, 'pedestrians_overflow': 32, 'near_pedestrian_on_crosswalk': 13, 'static_objects_overflow': 47, 'on_pickup_dropoff': 16, 'on_traffic_light_intersection': 15, 'traversing_intersection': 12, 'traversing_crosswalk': 11}`.
 
 0B-3 permits entering 0B-4. Gate 0 remains NOT CLOSED until 0C has completed.
+
+Real-data clipping coverage (from saved state comparisons): `{'vehicles_selected': 783, 'vehicles_clipped': 11, 'pedestrians_selected': 980, 'pedestrians_clipped': 0}`. Every reported clipped value agrees with native output.

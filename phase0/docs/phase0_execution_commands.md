@@ -38,3 +38,11 @@ The source inspection found that StaticObject exposes a dummy zero velocity. The
 MPLCONFIGDIR=/tmp/phase0-mpl PYTHONPATH=phase0/src:$PYTHONPATH /home/leitingting/anaconda3/envs/sledge/bin/python -m phase0_audit.temporal_diagnostics --input-dir phase0/outputs/temporal_identity --output-dir phase0/outputs/temporal_identity > phase0/outputs/temporal_diagnostics_run.log 2>&1
 MPLCONFIGDIR=/tmp/phase0-mpl PYTHONPATH=phase0/src:$PYTHONPATH /home/leitingting/anaconda3/envs/sledge/bin/python -m pytest -q phase0/tests > phase0/outputs/phase0_final_tests.log 2>&1
 ```
+
+Final repository checks included `git diff ce5a8a9 --name-only -- sledge` (empty), SHA-256 rechecks of all 100 B3 input cache files (unchanged), and:
+
+```bash
+git -c core.whitespace=cr-at-eol diff ce5a8a9 --check
+```
+
+Python's standard csv.writer uses CRLF record terminators. The default Git whitespace checker initially flagged these as trailing whitespace; the explicit `cr-at-eol` check passes without changing data or relaxing numerical tolerances. The actor observation gzip is explicitly tracked despite the repository's global `*.gz` ignore rule.

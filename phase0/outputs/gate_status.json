@@ -1,0 +1,18 @@
+{
+  "phase0b3": "PASS",
+  "phase0b4": "COMPLETE",
+  "phase0c": "PASS",
+  "gate0": "CLOSED",
+  "scope": "Requested Phase 0 representation/data/identity contract audit on the recorded real cohorts.",
+  "reason": "Native instrument equivalence passed; targeted statistics and unknown reasons are quantified; temporal identity/time/coordinate/transition contracts are supported by real rollouts.",
+  "qualifications": [
+    "137977 semantic unknown labels remain: 40684 verified untagged and 97293 without local source DB.",
+    "Source trajectory velocity/position outliers remain documented quality observations; annotated identity consistency is not proof of perfect physical annotation.",
+    "No hazard semantics, event-time precision, planner difficulty or model performance is certified."
+  ],
+  "commits": {
+    "phase0b3": "be87b9c55d5181716b5b4c54381ef093b00153c3",
+    "phase0b4": "85f8a18fdf82b684d4d8f4161ea35f09509f6e93",
+    "phase0c": "42c62b2b741ab8b2984b307c046da3ff128e241d"
+  }
+}
