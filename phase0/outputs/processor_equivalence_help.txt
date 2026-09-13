@@ -1,0 +1,14 @@
+usage: processor_equivalence.py [-h] [--cache-root CACHE_ROOT]
+                                [--output-dir OUTPUT_DIR]
+                                [--sample-size SAMPLE_SIZE] [--seed SEED]
+                                [--candidate-pool-size CANDIDATE_POOL_SIZE]
+
+Phase 0B-3: validate retention replay against the complete native processor.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --cache-root CACHE_ROOT
+  --output-dir OUTPUT_DIR
+  --sample-size SAMPLE_SIZE
+  --seed SEED
+  --candidate-pool-size CANDIDATE_POOL_SIZE
