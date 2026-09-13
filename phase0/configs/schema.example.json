@@ -1,0 +1,21 @@
+{
+  "frame": "ego_local",
+  "columns": {
+    "x": 0,
+    "y": 1,
+    "heading": 2,
+    "length": 3,
+    "width": 4,
+    "vx": 5,
+    "vy": 6,
+    "actor_type": 7,
+    "track_id": 8,
+    "valid": 9
+  },
+  "actor_type_map": {
+    "0": "vehicle",
+    "1": "pedestrian",
+    "2": "static",
+    "3": "ego"
+  }
+}
