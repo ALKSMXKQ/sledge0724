@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from sledge.script.evaluation.phase2_b1_hazard_audit import summarize_audit
+from sledge.script.evaluation.phase2_b1_hazard_audit_metrics import summarize_audit
 
 
 def _row(*, H: bool, status: str = "built", reason: str | None = None):
